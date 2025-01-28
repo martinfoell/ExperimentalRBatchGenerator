@@ -1,7 +1,5 @@
 #include "TMVA/RTensor.hxx"
 #include "ROOT/RDF/RDatasetSpec.hxx"
-#include "TMVA/BatchGenerator/RChunkLoader.hxx"
-#include "TMVA/BatchGenerator/RBatchLoader.hxx"
 #include "TROOT.h"
 
 #include <cmath>
@@ -11,6 +9,7 @@
 #include <thread>
 #include <variant>
 #include <vector>
+#include <iostream>
 
 
 class RSplitTrainValidation {
@@ -25,13 +24,15 @@ class RSplitTrainValidation {
   bool fNotFiltered;
 
  public:
-  RSplitTrainValidation(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t batchSize,
-                        const float validationSplit = 0.0, bool dropRemainder = true)
+  RSplitTrainValidation(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
+                        const float validationSplit = 0.0)
     : f_rdf(rdf),
       fChunkSize(chunkSize),
-      fBatchSize(batchSize),
+      fRangeSize(rangeSize),
       fValidationSplit(validationSplit),
-      fNotFiltered(f_rdf.GetFilterNames().empty()),
+      fNotFiltered(f_rdf.GetFilterNames().empty())
   {
-
+    std::cout << "test" << std::endl;
   }
+
+};
