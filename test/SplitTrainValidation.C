@@ -8,8 +8,8 @@ void SplitTrainValidation() {
 
 
   float validationSplit = 0.3;
-  std::size_t chunkSize = 90;
-  std::size_t rangeSize = 20;  
+  std::size_t chunkSize = 85;
+  std::size_t rangeSize = 23;  
   
   RSplitTrainValidation splitTrainValidation(rdf, chunkSize,  rangeSize, validationSplit);
 
