@@ -210,12 +210,42 @@ class RSplitTrainValidation {
     }    
     
 
-    // for (int i = 0; i < fNumFullTrainChunks; i++ ) {
-    // // Insert the slice from vec1 into vec2 at the second position (index 1)
-    // // vec2.insert(vec2.begin() + 1, start, end);
-    //   TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + 7*i, FullRanges.begin() + 7*i + 5);
-      
-    // }
+    int currentElementFullRanges = 0;
+    int currentElementReminderRanges = 0;
+    
+    // Full train chunks
+    for (int i = 0; i < fNumFullTrainChunks; i++ ) {
+      TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + fNumFullChunkFullRanges*i, FullRanges.begin() + fNumFullChunkFullRanges*(i + 1));
+      if (fNumFullChunkReminderRanges != 0) {
+        TrainRanges.insert(TrainRanges.end(), ReminderRanges.begin() + fNumFullChunkReminderRanges*i, ReminderRanges.begin() + fNumFullChunkReminderRanges*i + 1);        
+      }
+    }
+    
+    currentElementFullRanges = fNumFullTrainChunks*fNumFullChunkFullRanges;
+    currentElementReminderRanges = fNumReminderTrainChunks*fNumFullChunkReminderRanges;
+    
+    // Reminder train chunk 
+    TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + currentElementFullRanges, FullRanges.begin() + currentElementFullRanges + fNumReminderTrainChunkFullRanges);
+    TrainRanges.insert(TrainRanges.end(), ReminderTrainRanges.begin(), ReminderTrainRanges.end());
+    
+    currentElementFullRanges += fNumReminderTrainChunkFullRanges;
+
+    // Full validation chunk
+    for (int i = 0; i < fNumFullValidationChunks; i++ ) {
+      ValidationRanges.insert(ValidationRanges.end(), FullRanges.begin() + currentElementFullRanges + fNumFullChunkFullRanges*i, FullRanges.begin() + currentElementFullRanges + fNumFullChunkFullRanges*(i + 1));
+      if (fNumFullChunkReminderRanges != 0) {
+        ValidationRanges.insert(ValidationRanges.end(), ReminderRanges.begin() + currentElementReminderRanges + fNumFullChunkReminderRanges*i, ReminderRanges.begin() + fNumFullChunkReminderRanges*i + 1);        
+      }
+    }
+    
+    currentElementFullRanges += fNumFullValidationChunks*fNumFullChunkFullRanges;
+    currentElementReminderRanges = fNumFullTrainChunks*fNumFullChunkReminderRanges;
+    
+    // // Reminder train chunk 
+    ValidationRanges.insert(ValidationRanges.end(), FullRanges.begin() + currentElementFullRanges, FullRanges.begin() + currentElementFullRanges + fNumReminderTrainChunkFullRanges);
+    ValidationRanges.insert(ValidationRanges.end(), ReminderValidationRanges.begin(), ReminderValidationRanges.end());
+    
+    // currentElementFullRanges += fNumReminderTrainChunkFullRanges;
     
     std::cout << "{";
     for (auto i : PartialSumRangeSizes) {
@@ -225,6 +255,12 @@ class RSplitTrainValidation {
 
     std::cout << "Train ranges: " << TrainRanges.size() << std::endl;
     for(auto i: TrainRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+
+    std::cout << "Validation ranges: " << ValidationRanges.size() << std::endl;
+    for(auto i: ValidationRanges) {
       std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
     }
     std::cout << " " << std::endl;
