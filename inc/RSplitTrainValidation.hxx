@@ -60,7 +60,9 @@ class RSplitTrainValidation {
 
   std::size_t fTotNumTrainReminderRanges;
   std::size_t fTotNumValidationReminderRanges;
-  
+
+  std::vector<Long_t> fRangeVector;
+
   ROOT::RDataFrame &f_rdf;    
 
   bool fNotFiltered;
@@ -124,6 +126,112 @@ class RSplitTrainValidation {
     fTotEntriesFromRanges = fTotNumFullRanges * fRangeSize + fTotNumReminderRanges * fFullChunkReminderRangeSize + fNumReminderTrainChunkReminderRanges * fReminderTrainChunkReminderRangeSize +  fNumReminderValidationChunkReminderRanges * fReminderValidationChunkReminderRangeSize;
   }
 
+  void CreateRangeVector() {
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    std::vector<std::pair<Long64_t,Long64_t>> FullRanges;
+    std::vector<std::pair<Long64_t,Long64_t>> ReminderRanges;
+    std::vector<std::pair<Long64_t,Long64_t>> ReminderTrainRanges;
+    std::vector<std::pair<Long64_t,Long64_t>> ReminderValidationRanges;
+
+    std::vector<std::pair<Long64_t,Long64_t>> TrainRanges;
+    std::vector<std::pair<Long64_t,Long64_t>> ValidationRanges;
+    std::vector<Long_t> RangeSizes = {};
+    RangeSizes.insert(RangeSizes.end(), fTotNumFullRanges, fRangeSize);
+    RangeSizes.insert(RangeSizes.end(), fTotNumReminderRanges , fFullChunkReminderRangeSize);
+    RangeSizes.insert(RangeSizes.end(), fNumReminderTrainChunkReminderRanges , fReminderTrainChunkReminderRangeSize);
+    RangeSizes.insert(RangeSizes.end(), fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize);        
+
+    std::cout << "{";
+    for (auto i : RangeSizes) {
+      std::cout << i << ", ";
+    }
+    std::cout << "}" << std::endl;
+    
+    std::shuffle(RangeSizes.begin(), RangeSizes.end(), g);
+
+    std::vector<Long_t> PartialSumRangeSizes(RangeSizes.size());
+    std::partial_sum(RangeSizes.begin(), RangeSizes.end(), PartialSumRangeSizes.begin());
+    PartialSumRangeSizes.insert(PartialSumRangeSizes.begin(), 0);
+    
+    for (int i = 0; i < PartialSumRangeSizes.size() - 1; i++) {
+      if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fRangeSize) {
+        FullRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));
+      }
+      
+      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fFullChunkReminderRangeSize) {
+        ReminderRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      }
+      
+      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fReminderTrainChunkReminderRangeSize) {
+        ReminderTrainRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      }
+      
+      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fReminderValidationChunkReminderRangeSize) {
+        ReminderValidationRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      }
+    }
+
+    // move pairs if reminder is equal
+    
+
+    std::shuffle(FullRanges.begin(), FullRanges.end(), g);
+    std::shuffle(ReminderRanges.begin(), ReminderRanges.end(), g);
+
+    for (int i = 0; i < fNumFullTrainChunks; i++ ) {
+    // Insert the slice from vec1 into vec2 at the second position (index 1)
+    // vec2.insert(vec2.begin() + 1, start, end);
+      TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + 7*i, FullRanges.begin() + 7*i + 5);
+      
+    }
+    
+    std::cout << "{";
+    for (auto i : PartialSumRangeSizes) {
+      std::cout << i << ", ";
+    }
+    std::cout << "}" << std::endl;
+
+    std::cout << "Train ranges: " << TrainRanges.size() << std::endl;
+    for(auto i: TrainRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    
+    std::cout << "Full ranges: " << FullRanges.size() << std::endl;
+    for(auto i: FullRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+
+    std::cout << "Reminder ranges: " << ReminderRanges.size() << std::endl;  
+    for(auto i: ReminderRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+
+    std::cout << "Reminder Train ranges: " << ReminderTrainRanges.size() << std::endl;  
+    for(auto i: ReminderTrainRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+
+    std::cout << "Reminder Validation ranges: " << ReminderValidationRanges.size() << std::endl;  
+    for(auto i: ReminderValidationRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    
+  }
+
+  void PrintRangeVector() {
+    std::cout << "{";
+    for (auto i : fRangeVector) {
+      std::cout << i << ", ";
+    }
+    std::cout << "}" << std::endl;
+  }
+  
   //to do: make variables which count how many ranges of each sort
   
   void PrintRow(std::string title, int col1, int col2, int col3, int col4, int colWidthS, int colWidth) {
