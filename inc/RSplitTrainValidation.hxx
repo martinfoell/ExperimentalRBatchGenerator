@@ -47,6 +47,19 @@ class RSplitTrainValidation {
   std::size_t fReminderTrainChunkReminderRangeSize;
   std::size_t fReminderValidationChunkReminderRangeSize;
   
+  std::size_t fTotNumFullChunks;
+  std::size_t fTotNumReminderChunks;
+  std::size_t fTotNumFullRanges;
+  std::size_t fTotNumReminderRanges;
+  std::size_t fTotNumReminderChunkFullRanges;
+  
+  std::size_t fTotEntriesFromRanges;
+
+  std::size_t fTotNumTrainFullRanges;
+  std::size_t fTotNumValidationFullRanges;
+
+  std::size_t fTotNumTrainReminderRanges;
+  std::size_t fTotNumValidationReminderRanges;
   
   ROOT::RDataFrame &f_rdf;    
 
@@ -93,9 +106,26 @@ class RSplitTrainValidation {
     fNumReminderTrainChunkReminderRanges = fReminderTrainChunkReminderRangeSize == 0 ? 0 : 1;
     fNumReminderValidationChunkReminderRanges = fReminderValidationChunkReminderRangeSize == 0 ? 0 : 1;
     
+    // tot
+    fTotNumFullChunks = fNumFullTrainChunks + fNumFullValidationChunks;
+    fTotNumReminderChunks = fNumReminderTrainChunks + fNumReminderValidationChunks;
     
+    fTotNumReminderChunkFullRanges = fNumReminderTrainChunkFullRanges + fNumReminderValidationChunkFullRanges;
+      
+    fTotNumTrainFullRanges = fNumFullTrainChunks * fNumFullChunkFullRanges + fNumReminderTrainChunkFullRanges;
+    fTotNumValidationFullRanges = fNumFullValidationChunks * fNumFullChunkFullRanges + fNumReminderValidationChunkFullRanges;
+
+    fTotNumTrainReminderRanges = fNumFullTrainChunks * fNumFullChunkReminderRanges;
+    fTotNumValidationReminderRanges = fNumFullValidationChunks * fNumFullChunkReminderRanges;    
+    
+    fTotNumFullRanges = fTotNumTrainFullRanges + fTotNumValidationFullRanges;
+    fTotNumReminderRanges = fTotNumTrainReminderRanges + fTotNumValidationReminderRanges;
+
+    fTotEntriesFromRanges = fTotNumFullRanges * fRangeSize + fTotNumReminderRanges * fFullChunkReminderRangeSize + fNumReminderTrainChunkReminderRanges * fReminderTrainChunkReminderRangeSize +  fNumReminderValidationChunkReminderRanges * fReminderValidationChunkReminderRangeSize;
   }
 
+  //to do: make variables which count how many ranges of each sort
+  
   void PrintRow(std::string title, int col1, int col2, int col3, int col4, int colWidthS, int colWidth) {
     std::cout << std::left;
     std::cout << std::setw(colWidthS) << title 
@@ -106,6 +136,17 @@ class RSplitTrainValidation {
               << std::endl;
   };
 
+  void PrintRowB(std::string title, int col1, int col2, int col3, int col4, int col5, int colWidthS, int colWidth) {
+    std::cout << std::left;
+    std::cout << std::setw(colWidthS) << title 
+              << std::setw(colWidth) << col1
+              << std::setw(colWidth) << col2
+              << std::setw(colWidth) << col3
+              << std::setw(colWidth) << col4
+              << std::setw(colWidth) << col5      
+              << std::endl;
+  };
+  
   void PrintRowHeader(std::string title, string col1, string col2, string col3, string col4, int colWidthS, int colWidth) {
     std::cout << std::string(colWidthS + 4 * colWidth, '=') << std::endl;
     std::cout << std::left;
@@ -118,11 +159,25 @@ class RSplitTrainValidation {
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;
     
   };
+
+  void PrintRowHeaderB(std::string title, string col1, string col2, string col3, string col4, string col5, int colWidthS, int colWidth) {
+    std::cout << std::string(colWidthS + 5 * colWidth, '=') << std::endl;
+    std::cout << std::left;
+    std::cout << std::setw(colWidthS) << title 
+              << std::setw(colWidth) << col1
+              << std::setw(colWidth) << col2
+              << std::setw(colWidth) << col3
+              << std::setw(colWidth) << col4
+              << std::setw(colWidth) << col5      
+              << std::endl;
+    std::cout << std::string(colWidthS + 5 * colWidth, '-') << std::endl;
+    
+  };
   
   void PrintProperties() {
 
     const int colWidthS = 25;
-    const int colWidth = 15;
+    const int colWidth = 10;
 
     // std::cout << std::left;
     std::cout 
@@ -130,28 +185,43 @@ class RSplitTrainValidation {
       << std::setw(2*colWidth) << "Validation"
       << std::endl;
 
-    PrintRowHeader("Entries", "Size", "Number", "Size", "Number", colWidthS, colWidth);  
-    PrintRow("Total", fNumTrainEntries, 1, fNumValidationEntries, 1, colWidthS, colWidth);
+    PrintRowHeader("Entries", "Number", "Size", "Number", "Size", colWidthS, colWidth);  
+    PrintRow("Total", 1, fNumTrainEntries, 1, fNumValidationEntries, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
 
-    PrintRowHeader("Chunk", "Size", "Number", "Size", "Number", colWidthS, colWidth);
-    PrintRow("Full", fChunkSize, fNumFullTrainChunks, fChunkSize, fNumFullValidationChunks, colWidthS, colWidth);
-    PrintRow("Reminder", fReminderTrainChunkSize, fNumReminderTrainChunks, fReminderValidationChunkSize, fNumReminderValidationChunks, colWidthS, colWidth);
+    PrintRowHeader("Chunk", "Number", "Size", "Number", "Size", colWidthS, colWidth);  
+    PrintRow("Full", fNumFullTrainChunks, fChunkSize, fNumFullValidationChunks, fChunkSize, colWidthS, colWidth);
+    PrintRow("Reminder", fNumReminderTrainChunks, fReminderTrainChunkSize, fNumReminderValidationChunks, fReminderValidationChunkSize, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
       
-    PrintRowHeader("Full chunks range", "Size", "Number", "Size", "Number", colWidthS, colWidth);
-    PrintRow("Full", fRangeSize, fNumFullChunkFullRanges, fRangeSize, fNumFullChunkFullRanges, colWidthS, colWidth);
-    PrintRow("Reminder", fFullChunkReminderRangeSize, fNumFullChunkReminderRanges, fFullChunkReminderRangeSize, fNumFullChunkReminderRanges, colWidthS, colWidth);
+    PrintRowHeader("Full chunks range", "Number", "Size", "Number", "Size", colWidthS, colWidth);      
+    PrintRow("Full", fNumFullChunkFullRanges, fRangeSize, fNumFullChunkFullRanges, fRangeSize, colWidthS, colWidth);
+    PrintRow("Reminder", fNumFullChunkReminderRanges, fFullChunkReminderRangeSize, fNumFullChunkReminderRanges, fFullChunkReminderRangeSize, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
 
-    PrintRowHeader("Rem. chunks range", "Size", "Number", "Size", "Number", colWidthS, colWidth);
-    PrintRow("Full", fRangeSize, fNumReminderTrainChunkFullRanges, fRangeSize, fNumReminderValidationChunkFullRanges, colWidthS, colWidth);
-    PrintRow("Reminder", fReminderTrainChunkReminderRangeSize, fNumReminderTrainChunkReminderRanges, fReminderValidationChunkReminderRangeSize, fNumReminderValidationChunkReminderRanges, colWidthS, colWidth);    
+    PrintRowHeader("Rem. chunks range", "Number", "Size", "Number", "Size", colWidthS, colWidth);          
+    PrintRow("Full", fNumReminderTrainChunkFullRanges, fRangeSize, fNumReminderValidationChunkFullRanges, fRangeSize, colWidthS, colWidth);
+    PrintRow("Reminder", fNumReminderTrainChunkReminderRanges, fReminderTrainChunkReminderRangeSize, fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize, colWidthS, colWidth);    
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
+
+    PrintRowHeaderB("Ranges", "Number", "Size", "Number", "Size", "Entries", colWidthS, colWidth);
+    PrintRowB("Full",  fTotNumTrainFullRanges, fRangeSize, fTotNumValidationFullRanges, fRangeSize,
+              fTotNumTrainFullRanges * fRangeSize +  fTotNumValidationFullRanges *fRangeSize, colWidthS, colWidth);
+    PrintRowB("Reminder", fTotNumTrainReminderRanges, fFullChunkReminderRangeSize, fTotNumValidationReminderRanges, fFullChunkReminderRangeSize,
+              fTotNumTrainReminderRanges * fFullChunkReminderRangeSize + fTotNumValidationReminderRanges * fFullChunkReminderRangeSize, colWidthS, colWidth);
+    PrintRowB("Reminder Train", fNumReminderTrainChunkReminderRanges, fReminderTrainChunkReminderRangeSize, 0, 0,
+              fNumReminderTrainChunkReminderRanges * fReminderTrainChunkReminderRangeSize, colWidthS, colWidth);
+    PrintRowB("Reminder Validation", 0, 0, fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize,
+              fNumReminderValidationChunkReminderRanges * fReminderValidationChunkReminderRangeSize, colWidthS, colWidth);
+
+    std::cout << std::string(colWidthS + 5 * colWidth, '-') << std::endl;            
+    PrintRowB("Total", fTotNumFullRanges * fRangeSize, fTotNumReminderRanges * fFullChunkReminderRangeSize, fNumReminderTrainChunkReminderRanges * fReminderTrainChunkReminderRangeSize, fNumReminderValidationChunkReminderRanges * fReminderValidationChunkReminderRangeSize, fTotEntriesFromRanges, colWidthS, colWidth);        
     
+    std::cout << fTotNumFullRanges << " " << fTotNumReminderRanges << std::endl;
+
   }
 };
