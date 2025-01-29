@@ -173,18 +173,49 @@ class RSplitTrainValidation {
       }
     }
 
-    // move pairs if reminder is equal
-    
-
     std::shuffle(FullRanges.begin(), FullRanges.end(), g);
     std::shuffle(ReminderRanges.begin(), ReminderRanges.end(), g);
 
-    for (int i = 0; i < fNumFullTrainChunks; i++ ) {
-    // Insert the slice from vec1 into vec2 at the second position (index 1)
-    // vec2.insert(vec2.begin() + 1, start, end);
-      TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + 7*i, FullRanges.begin() + 7*i + 5);
-      
+    // move pairs if reminder is equal
+    if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
+         fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
+      ReminderTrainRanges.push_back(ReminderRanges.back());
+      ReminderRanges.pop_back();
+
+      ReminderValidationRanges.push_back(ReminderRanges.back());
+      ReminderRanges.pop_back();
+
+      std::cout << "i) Reminder range, reminder train range and reminder validation range are equal " << std::endl;
     }
+
+    else if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize ) {
+      ReminderTrainRanges.push_back(ReminderRanges.back());
+      ReminderRanges.pop_back();
+
+      std::cout << "ii) Reminder range and reminder train range are equal " << std::endl;      
+    }    
+
+    else if ( fFullChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
+      ReminderValidationRanges.push_back(ReminderRanges.back());
+      ReminderRanges.pop_back();
+
+      std::cout << "iii) Reminder range and reminder validation range are equal " << std::endl;            
+    }    
+
+    else if ( fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
+      ReminderValidationRanges.push_back(ReminderTrainRanges.back());
+      ReminderTrainRanges.pop_back();
+
+      std::cout << "iv) Reminder train range and reminder validation range are equal " << std::endl;                  
+    }    
+    
+
+    // for (int i = 0; i < fNumFullTrainChunks; i++ ) {
+    // // Insert the slice from vec1 into vec2 at the second position (index 1)
+    // // vec2.insert(vec2.begin() + 1, start, end);
+    //   TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + 7*i, FullRanges.begin() + 7*i + 5);
+      
+    // }
     
     std::cout << "{";
     for (auto i : PartialSumRangeSizes) {
