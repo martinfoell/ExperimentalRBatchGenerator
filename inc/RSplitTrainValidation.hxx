@@ -63,6 +63,16 @@ class RSplitTrainValidation {
 
   std::vector<Long_t> fRangeVector;
 
+  std::vector<Long_t> fPartialSumRangeSizes;
+  
+  std::vector<std::pair<Long64_t,Long64_t>> fFullRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fReminderRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fReminderTrainRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fReminderValidationRanges;
+
+  std::vector<std::pair<Long64_t,Long64_t>> fTrainRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fValidationRanges;
+  
   ROOT::RDataFrame &f_rdf;    
 
   bool fNotFiltered;
@@ -130,167 +140,224 @@ class RSplitTrainValidation {
     std::random_device rd;
     std::mt19937 g(rd());
 
-    std::vector<std::pair<Long64_t,Long64_t>> FullRanges;
-    std::vector<std::pair<Long64_t,Long64_t>> ReminderRanges;
-    std::vector<std::pair<Long64_t,Long64_t>> ReminderTrainRanges;
-    std::vector<std::pair<Long64_t,Long64_t>> ReminderValidationRanges;
-
-    std::vector<std::pair<Long64_t,Long64_t>> TrainRanges;
-    std::vector<std::pair<Long64_t,Long64_t>> ValidationRanges;
     std::vector<Long_t> RangeSizes = {};
     RangeSizes.insert(RangeSizes.end(), fTotNumFullRanges, fRangeSize);
     RangeSizes.insert(RangeSizes.end(), fTotNumReminderRanges , fFullChunkReminderRangeSize);
     RangeSizes.insert(RangeSizes.end(), fNumReminderTrainChunkReminderRanges , fReminderTrainChunkReminderRangeSize);
     RangeSizes.insert(RangeSizes.end(), fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize);        
 
-    std::cout << "{";
-    for (auto i : RangeSizes) {
-      std::cout << i << ", ";
-    }
-    std::cout << "}" << std::endl;
+    // std::cout << "{";
+    // for (auto i : RangeSizes) {
+    //   std::cout << i << ", ";
+    // }
+    // std::cout << "}" << std::endl;
     
     std::shuffle(RangeSizes.begin(), RangeSizes.end(), g);
 
-    std::vector<Long_t> PartialSumRangeSizes(RangeSizes.size());
-    std::partial_sum(RangeSizes.begin(), RangeSizes.end(), PartialSumRangeSizes.begin());
-    PartialSumRangeSizes.insert(PartialSumRangeSizes.begin(), 0);
-    
-    for (int i = 0; i < PartialSumRangeSizes.size() - 1; i++) {
-      if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fRangeSize) {
-        FullRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));
+
+    fPartialSumRangeSizes.resize(RangeSizes.size());
+
+    std::partial_sum(RangeSizes.begin(), RangeSizes.end(), fPartialSumRangeSizes.begin());
+    fPartialSumRangeSizes.insert(fPartialSumRangeSizes.begin(), 0);
+  };
+
+  void SplitRangeVector() {
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    for (int i = 0; i < fPartialSumRangeSizes.size() - 1; i++) {
+      if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fRangeSize) {
+        fFullRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));
       }
       
-      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fFullChunkReminderRangeSize) {
-        ReminderRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      else if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fFullChunkReminderRangeSize) {
+        fReminderRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
       }
       
-      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fReminderTrainChunkReminderRangeSize) {
-        ReminderTrainRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      else if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fReminderTrainChunkReminderRangeSize) {
+        fReminderTrainRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
       }
       
-      else if (PartialSumRangeSizes[i+1] - PartialSumRangeSizes[i] == fReminderValidationChunkReminderRangeSize) {
-        ReminderValidationRanges.push_back(std::make_pair(PartialSumRangeSizes[i], PartialSumRangeSizes[i+1]));      
+      else if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fReminderValidationChunkReminderRangeSize) {
+        fReminderValidationRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
       }
     }
 
-    std::shuffle(FullRanges.begin(), FullRanges.end(), g);
-    std::shuffle(ReminderRanges.begin(), ReminderRanges.end(), g);
+    std::shuffle(fFullRanges.begin(), fFullRanges.end(), g);
+    std::shuffle(fReminderRanges.begin(), fReminderRanges.end(), g);
 
     // move pairs if reminder is equal
+    // if ()
     if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
-         fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
-      ReminderTrainRanges.push_back(ReminderRanges.back());
-      ReminderRanges.pop_back();
+         fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
+         fFullChunkReminderRangeSize != 0 ) {
+      fReminderTrainRanges.push_back(fReminderRanges.back());
+      fReminderRanges.pop_back();
 
-      ReminderValidationRanges.push_back(ReminderRanges.back());
-      ReminderRanges.pop_back();
+      fReminderValidationRanges.push_back(fReminderRanges.back());
+      fReminderRanges.pop_back();
 
       std::cout << "i) Reminder range, reminder train range and reminder validation range are equal " << std::endl;
     }
 
-    else if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize ) {
-      ReminderTrainRanges.push_back(ReminderRanges.back());
-      ReminderRanges.pop_back();
+    else if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
+              fFullChunkReminderRangeSize != 0) {
+      fReminderTrainRanges.push_back(fReminderRanges.back());
+      fReminderRanges.pop_back();
 
       std::cout << "ii) Reminder range and reminder train range are equal " << std::endl;      
     }    
 
-    else if ( fFullChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
-      ReminderValidationRanges.push_back(ReminderRanges.back());
-      ReminderRanges.pop_back();
+    else if ( fFullChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
+              fFullChunkReminderRangeSize != 0) {
+      fReminderValidationRanges.push_back(fReminderRanges.back());
+      fReminderRanges.pop_back();
 
       std::cout << "iii) Reminder range and reminder validation range are equal " << std::endl;            
     }    
 
-    else if ( fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize ) {
-      ReminderValidationRanges.push_back(ReminderTrainRanges.back());
-      ReminderTrainRanges.pop_back();
+    else if ( fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
+              fReminderTrainChunkReminderRangeSize != 0) {
+      fReminderValidationRanges.push_back(fReminderTrainRanges.back());
+      fReminderTrainRanges.pop_back();
 
       std::cout << "iv) Reminder train range and reminder validation range are equal " << std::endl;                  
     }    
-    
+  
+  };    
 
+
+  void CreateTrainValidationRangeVectors() {
     int currentElementFullRanges = 0;
     int currentElementReminderRanges = 0;
+
+
+    // fill full chunk
     
-    // Full train chunks
-    for (int i = 0; i < fNumFullTrainChunks; i++ ) {
-      TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + fNumFullChunkFullRanges*i, FullRanges.begin() + fNumFullChunkFullRanges*(i + 1));
-      if (fNumFullChunkReminderRanges != 0) {
-        TrainRanges.insert(TrainRanges.end(), ReminderRanges.begin() + fNumFullChunkReminderRanges*i, ReminderRanges.begin() + fNumFullChunkReminderRanges*i + 1);        
+    if (fNumFullTrainChunks != 0) {
+      for (int i = 0; i < fNumFullTrainChunks; i++ ) {
+        // fill full ranges 
+        std::move(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges, std::back_inserter(fTrainRanges));
+        fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges);
+
+        // fill reminder ranges
+        if (fNumFullChunkReminderRanges != 0) {
+          std::move(fReminderRanges.begin(), fReminderRanges.begin() + 1, std::back_inserter(fTrainRanges));        
+          fReminderRanges.erase(fReminderRanges.begin(), fReminderRanges.begin() + 1);        
+        };
       }
     }
-    
-    currentElementFullRanges = fNumFullTrainChunks*fNumFullChunkFullRanges;
-    currentElementReminderRanges = fNumReminderTrainChunks*fNumFullChunkReminderRanges;
-    
-    // Reminder train chunk 
-    TrainRanges.insert(TrainRanges.end(), FullRanges.begin() + currentElementFullRanges, FullRanges.begin() + currentElementFullRanges + fNumReminderTrainChunkFullRanges);
-    TrainRanges.insert(TrainRanges.end(), ReminderTrainRanges.begin(), ReminderTrainRanges.end());
-    
-    currentElementFullRanges += fNumReminderTrainChunkFullRanges;
 
-    // Full validation chunk
-    for (int i = 0; i < fNumFullValidationChunks; i++ ) {
-      ValidationRanges.insert(ValidationRanges.end(), FullRanges.begin() + currentElementFullRanges + fNumFullChunkFullRanges*i, FullRanges.begin() + currentElementFullRanges + fNumFullChunkFullRanges*(i + 1));
-      if (fNumFullChunkReminderRanges != 0) {
-        ValidationRanges.insert(ValidationRanges.end(), ReminderRanges.begin() + currentElementReminderRanges + fNumFullChunkReminderRanges*i, ReminderRanges.begin() + fNumFullChunkReminderRanges*i + 1);        
+    // fill reminder chunk
+
+    // fill full ranges 
+    if (fNumReminderTrainChunkFullRanges != 0) {
+      std::move(fFullRanges.begin(), fFullRanges.begin() + fNumReminderTrainChunkFullRanges, std::back_inserter(fTrainRanges));
+      fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumReminderTrainChunkFullRanges);
+    }
+    // fill reminder ranges
+    if (fNumReminderTrainChunkReminderRanges != 0) {
+      std::move(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), std::back_inserter(fTrainRanges));
+      fReminderTrainRanges.erase(fReminderTrainRanges.begin(), fReminderTrainRanges.end());
+    }
+
+
+    // fill full chunk
+    
+    if (fNumFullValidationChunks != 0) {    
+      for (int i = 0; i < fNumFullValidationChunks; i++ ) {
+        // fill full ranges 
+        std::move(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges, std::back_inserter(fValidationRanges));
+        fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges);
+
+        // fill reminder ranges
+        if (fNumFullChunkReminderRanges != 0) {
+          std::move(fReminderRanges.begin(), fReminderRanges.begin() + 1, std::back_inserter(fValidationRanges));        
+          fReminderRanges.erase(fReminderRanges.begin(), fReminderRanges.begin() + 1);        
+        };
       }
     }
-    
-    currentElementFullRanges += fNumFullValidationChunks*fNumFullChunkFullRanges;
-    currentElementReminderRanges = fNumFullTrainChunks*fNumFullChunkReminderRanges;
-    
-    // // Reminder train chunk 
-    ValidationRanges.insert(ValidationRanges.end(), FullRanges.begin() + currentElementFullRanges, FullRanges.begin() + currentElementFullRanges + fNumReminderTrainChunkFullRanges);
-    ValidationRanges.insert(ValidationRanges.end(), ReminderValidationRanges.begin(), ReminderValidationRanges.end());
-    
-    // currentElementFullRanges += fNumReminderTrainChunkFullRanges;
-    
-    std::cout << "{";
-    for (auto i : PartialSumRangeSizes) {
-      std::cout << i << ", ";
-    }
-    std::cout << "}" << std::endl;
 
-    std::cout << "Train ranges: " << TrainRanges.size() << std::endl;
-    for(auto i: TrainRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
-    }
-    std::cout << " " << std::endl;
+    // fill reminder chunk
 
-    std::cout << "Validation ranges: " << ValidationRanges.size() << std::endl;
-    for(auto i: ValidationRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    // fill full ranges 
+    if (fNumReminderValidationChunkFullRanges != 0) {
+      std::move(fFullRanges.begin(), fFullRanges.begin() + fNumReminderValidationChunkFullRanges, std::back_inserter(fValidationRanges));
+      fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumReminderValidationChunkFullRanges);
     }
-    std::cout << " " << std::endl;
-    
-    std::cout << "Full ranges: " << FullRanges.size() << std::endl;
-    for(auto i: FullRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    // fill reminder ranges
+    if (fNumReminderValidationChunkReminderRanges != 0) {
+      std::move(fReminderValidationRanges.begin(), fReminderValidationRanges.end(), std::back_inserter(fValidationRanges));
+      fReminderValidationRanges.erase(fReminderValidationRanges.begin(), fReminderValidationRanges.end());
     }
-    std::cout << " " << std::endl;
-
-    std::cout << "Reminder ranges: " << ReminderRanges.size() << std::endl;  
-    for(auto i: ReminderRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
-    }
-    std::cout << " " << std::endl;
-
-    std::cout << "Reminder Train ranges: " << ReminderTrainRanges.size() << std::endl;  
-    for(auto i: ReminderTrainRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
-    }
-    std::cout << " " << std::endl;
-
-    std::cout << "Reminder Validation ranges: " << ReminderValidationRanges.size() << std::endl;  
-    for(auto i: ReminderValidationRanges) {
-      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
-    }
-    std::cout << " " << std::endl;
-    
   }
 
+  void PrintTrainValidationVector() {
+    CreateRangeVector();
+    SplitRangeVector();
+
+    std::cout << " " << std::endl;    
+    std::cout << "Full ranges: " << fFullRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    for(auto i: fFullRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+
+    std::cout << "Reminder ranges: " << fReminderRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;    
+    for(auto i: fReminderRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+    
+    std::cout << "Reminder Train ranges: " << fReminderTrainRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;      
+    for(auto i: fReminderTrainRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+
+    std::cout << "Reminder Validation ranges: " << fReminderValidationRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    for(auto i: fReminderValidationRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+    
+    CreateTrainValidationRangeVectors();
+
+    std::cout << " " << std::endl;
+    std::cout << "Train ranges: " << fTrainRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;    
+    for(auto i: fTrainRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+
+    std::cout << "Validation ranges: " << fValidationRanges.size() << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    for(auto i: fValidationRanges) {
+      std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
+    }
+    std::cout << " " << std::endl;
+    std::cout << "-------------------------" << std::endl;
+    std::cout << " " << std::endl;              
+    
+    
+  }
+    
   void PrintRangeVector() {
     std::cout << "{";
     for (auto i : fRangeVector) {

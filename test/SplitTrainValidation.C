@@ -29,13 +29,15 @@ void SplitTrainValidation() {
   // std::size_t rangeSize = 20;  
 
 
-  float validationSplit = 0.3;
-  std::size_t chunkSize = 85;
-  std::size_t rangeSize = 20;  
+  float validationSplit = 0.1;
+  std::size_t chunkSize = 80;
+  std::size_t rangeSize = 10; // now working with 10
 
   RSplitTrainValidation splitTrainValidation(rdf, chunkSize,  rangeSize, validationSplit);
 
   splitTrainValidation.PrintProperties();
-  splitTrainValidation.CreateRangeVector();
+  // splitTrainValidation.CreateRangeVector();
   splitTrainValidation.PrintRangeVector();
+  splitTrainValidation.PrintTrainValidationVector();
+
 }
