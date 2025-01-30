@@ -11,7 +11,36 @@
 #include <vector>
 #include <iostream>
 
+template <typename... ColTypes>
+class RRangeChunkLoaderFunctor {
+  std::size_t fOffset{};  
+  std::size_t fVecSizeIdx{};
+  TMVA::Experimental::RTensor<float> &fChunkTensor;
+  int fI;
+  int fNumColumns;
+  template <typename T, std::enable_if_t<!ROOT::Internal::RDF::IsDataContainer<T>::value, int> = 0>
+  void AssignToTensorRange(const T &val, int i, int numColumns)
+  {
+    fChunkTensor.GetData()[fOffset++ + numColumns*i] = val;
+  }
+  
+ public:
+  RRangeChunkLoaderFunctor(TMVA::Experimental::RTensor<float> &chunkTensor, int i, int numColumns)
+    : fChunkTensor(chunkTensor),
+      fI(i),
+      fNumColumns(numColumns)
+  {
+  }
 
+  void operator()( const ColTypes &...cols)
+  {
+    fVecSizeIdx = 1;
+    (AssignToTensorRange(cols, fI, fNumColumns), ...);
+  }
+  
+};
+
+template <typename... Args>
 class RSplitTrainValidation {
  private:
   std::size_t fNumEntries;
@@ -73,14 +102,19 @@ class RSplitTrainValidation {
   std::vector<std::pair<Long64_t,Long64_t>> fTrainRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fValidationRanges;
   
-  ROOT::RDataFrame &f_rdf;    
+  TMVA::Experimental::RTensor<float> &fChunkTensor;
+  // TMVA::Experimental::RTensor<float> &fTrainTensor;  
+  ROOT::RDataFrame &f_rdf;
+  std::vector<std::string> fCols;
 
   bool fNotFiltered;
 
  public:
-  RSplitTrainValidation(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
-                        const float validationSplit = 0.0)
+  RSplitTrainValidation(ROOT::RDataFrame &rdf, TMVA::Experimental::RTensor<float> &chunkTensor, const std::size_t chunkSize, const std::size_t rangeSize,
+                        const float validationSplit, const std::vector<std::string> &cols)
     : f_rdf(rdf),
+      fCols(cols),      
+      fChunkTensor(chunkTensor),      
       fChunkSize(chunkSize),
       fRangeSize(rangeSize),
       fValidationSplit(validationSplit),
@@ -232,7 +266,6 @@ class RSplitTrainValidation {
     int currentElementFullRanges = 0;
     int currentElementReminderRanges = 0;
 
-
     // fill full chunk
     
     if (fNumFullTrainChunks != 0) {
@@ -290,6 +323,24 @@ class RSplitTrainValidation {
     if (fNumReminderValidationChunkReminderRanges != 0) {
       std::move(fReminderValidationRanges.begin(), fReminderValidationRanges.end(), std::back_inserter(fValidationRanges));
       fReminderValidationRanges.erase(fReminderValidationRanges.begin(), fReminderValidationRanges.end());
+    }
+  }
+
+  void LoadDataset(TMVA::Experimental::RTensor<float> &TrainTensor) {
+    CreateRangeVector();
+    SplitRangeVector();
+    CreateTrainValidationRangeVectors();
+    TrainTensor = TrainTensor.Resize({{fNumTrainEntries, fCols.size()}});  
+    fChunkTensor = fChunkTensor.Resize({{fNumTrainEntries, fCols.size()}});
+    int chunkEntry = 0;
+    std::cout << "Num columns " << fCols.size() << std::endl;
+    for (int i = 0; i < fTrainRanges.size(); i++) {
+      // RRangeChunkLoaderFunctor<Args...> func(fChunkTensor, chunkEntry, fCols.size());
+      RRangeChunkLoaderFunctor<Args...> func(TrainTensor, chunkEntry, fCols.size());
+      ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[i].first, fTrainRanges[i].second);
+      f_rdf.Foreach(func, fCols);
+      chunkEntry += fTrainRanges[i].second - fTrainRanges[i].first;
+      std::cout << chunkEntry << std::endl;
     }
   }
 
@@ -432,19 +483,23 @@ class RSplitTrainValidation {
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
 
-    PrintRowHeader("Chunk", "Number", "Size", "Number", "Size", colWidthS, colWidth);  
+    PrintRowHeader("Chunk distribution", "Number", "Size", "Number", "Size", colWidthS, colWidth);  
     PrintRow("Full", fNumFullTrainChunks, fChunkSize, fNumFullValidationChunks, fChunkSize, colWidthS, colWidth);
     PrintRow("Reminder", fNumReminderTrainChunks, fReminderTrainChunkSize, fNumReminderValidationChunks, fReminderValidationChunkSize, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
-      
-    PrintRowHeader("Full chunks range", "Number", "Size", "Number", "Size", colWidthS, colWidth);      
+
+    std::cout << std::left;
+    std::cout << "Full chunks" << std::endl;
+    PrintRowHeader("Range distribution", "Number", "Size", "Number", "Size", colWidthS, colWidth);          
     PrintRow("Full", fNumFullChunkFullRanges, fRangeSize, fNumFullChunkFullRanges, fRangeSize, colWidthS, colWidth);
     PrintRow("Reminder", fNumFullChunkReminderRanges, fFullChunkReminderRangeSize, fNumFullChunkReminderRanges, fFullChunkReminderRangeSize, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
 
-    PrintRowHeader("Rem. chunks range", "Number", "Size", "Number", "Size", colWidthS, colWidth);          
+    std::cout << std::left;
+    std::cout << "Reminder chunks" << std::endl;
+    PrintRowHeader("Range distribution", "Number", "Size", "Number", "Size", colWidthS, colWidth);          
     PrintRow("Full", fNumReminderTrainChunkFullRanges, fRangeSize, fNumReminderValidationChunkFullRanges, fRangeSize, colWidthS, colWidth);
     PrintRow("Reminder", fNumReminderTrainChunkReminderRanges, fReminderTrainChunkReminderRangeSize, fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize, colWidthS, colWidth);    
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        

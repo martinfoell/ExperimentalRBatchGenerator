@@ -29,15 +29,32 @@ void SplitTrainValidation() {
   // std::size_t rangeSize = 20;  
 
 
-  float validationSplit = 0.1;
-  std::size_t chunkSize = 80;
-  std::size_t rangeSize = 10; // now working with 10
+  float validationSplit = 0.5;
+  std::size_t chunkSize = 50;
+  std::size_t rangeSize = 20; // now working with 10
+  
+  std::vector<std::string> columns = {"A"};
 
-  RSplitTrainValidation splitTrainValidation(rdf, chunkSize,  rangeSize, validationSplit);
+  // TMVA::Experimental::RTensor<float> ChunkTensor((std::vector<std::size_t>{150, columns.size()}));
+  TMVA::Experimental::RTensor<float> TrainTensor({0,0});
+  // TrainTensor = TrainTensor.Resize({{150, columns.size()}});  
+
+  // TMVA::Experimental::RTensor<float> TrainTensor({0,0});
+  // TrainTensor = TrainTensor.Resize({{150, columns.size()}});  
+  
+  TMVA::Experimental::RTensor<float> ChunkTensor({0,0});  
+  // TMVA::Experimental::RTensor<float> ChunkTensor(((std::vector<std::size_t>{0,0})));
+  // std::cout << ChunkTensor.Shape()[0] << std::endl;
+  // ChunkTensor = ChunkTensor.Resize({{150, columns.size()}});
+  RSplitTrainValidation<Double_t> splitTrainValidation(rdf, ChunkTensor, chunkSize,  rangeSize, validationSplit, columns);
 
   splitTrainValidation.PrintProperties();
   // splitTrainValidation.CreateRangeVector();
   splitTrainValidation.PrintRangeVector();
-  splitTrainValidation.PrintTrainValidationVector();
+  // splitTrainValidation.PrintTrainValidationVector();
+  splitTrainValidation.LoadDataset(TrainTensor);
+
+  // std::cout << ChunkTensor << std::endl;
+  std::cout << TrainTensor << std::endl;  
 
 }
