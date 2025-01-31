@@ -102,28 +102,29 @@ class RSplitTrainValidation {
   std::vector<std::pair<Long64_t,Long64_t>> fTrainRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fValidationRanges;
   
-  TMVA::Experimental::RTensor<float> &fChunkTensor;
-  // TMVA::Experimental::RTensor<float> &fTrainTensor;  
   ROOT::RDataFrame &f_rdf;
   std::vector<std::string> fCols;
+  std::size_t fNumCols;
 
   bool fNotFiltered;
+  bool fShuffle;
 
  public:
-  RSplitTrainValidation(ROOT::RDataFrame &rdf, TMVA::Experimental::RTensor<float> &chunkTensor, const std::size_t chunkSize, const std::size_t rangeSize,
-                        const float validationSplit, const std::vector<std::string> &cols)
+  RSplitTrainValidation(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
+                        const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
     : f_rdf(rdf),
       fCols(cols),      
-      fChunkTensor(chunkTensor),      
       fChunkSize(chunkSize),
       fRangeSize(rangeSize),
       fValidationSplit(validationSplit),
-      fNotFiltered(f_rdf.GetFilterNames().empty())
+      fNotFiltered(f_rdf.GetFilterNames().empty()),
+      fShuffle(shuffle)
   {
     if (fNotFiltered) {
       fNumEntries = f_rdf.Count().GetValue();
     }
-    
+
+    fNumCols = fCols.size();
     fNumValidationEntries = static_cast<std::size_t>(fValidationSplit * fNumEntries);
     fNumTrainEntries = fNumEntries - fNumValidationEntries;
 
@@ -326,22 +327,69 @@ class RSplitTrainValidation {
     }
   }
 
-  void LoadDataset(TMVA::Experimental::RTensor<float> &TrainTensor) {
+  void Start() {
     CreateRangeVector();
     SplitRangeVector();
     CreateTrainValidationRangeVectors();
-    TrainTensor = TrainTensor.Resize({{fNumTrainEntries, fCols.size()}});  
-    fChunkTensor = fChunkTensor.Resize({{fNumTrainEntries, fCols.size()}});
+  }
+  
+  void LoadTrainingDataset(TMVA::Experimental::RTensor<float> &TrainTensor) {
+    TMVA::Experimental::RTensor<float> Tensor({fNumTrainEntries, fNumCols});     
+    TrainTensor = TrainTensor.Resize({{fNumTrainEntries, fNumCols}});
+
+    std::vector<int> indices(fNumTrainEntries);
+    std::iota(indices.begin(), indices.end(), 0);  // Fill with 1, 2, ..., 100
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    
+    if (fShuffle) {
+      std::shuffle(indices.begin(), indices.end(), g);
+    }
+    
     int chunkEntry = 0;
-    std::cout << "Num columns " << fCols.size() << std::endl;
     for (int i = 0; i < fTrainRanges.size(); i++) {
-      // RRangeChunkLoaderFunctor<Args...> func(fChunkTensor, chunkEntry, fCols.size());
-      RRangeChunkLoaderFunctor<Args...> func(TrainTensor, chunkEntry, fCols.size());
+      RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
       ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[i].first, fTrainRanges[i].second);
       f_rdf.Foreach(func, fCols);
       chunkEntry += fTrainRanges[i].second - fTrainRanges[i].first;
-      std::cout << chunkEntry << std::endl;
     }
+
+    for (int i = 0; i < fNumTrainEntries; i++) {
+    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+              TrainTensor.GetData() + i * fNumCols);
+      
+    }
+  }
+
+  void LoadValidationDataset(TMVA::Experimental::RTensor<float> &ValidationTensor) {
+    TMVA::Experimental::RTensor<float> Tensor({fNumValidationEntries, fNumCols});     
+    ValidationTensor = ValidationTensor.Resize({{fNumValidationEntries, fNumCols}});
+
+    std::vector<int> indices(fNumValidationEntries);
+    std::iota(indices.begin(), indices.end(), 0);  // Fill with 1, 2, ..., 100
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    
+    if (fShuffle) {
+      std::shuffle(indices.begin(), indices.end(), g);
+    }
+    
+    int chunkEntry = 0;
+    for (int i = 0; i < fValidationRanges.size(); i++) {
+      RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+      ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fValidationRanges[i].first, fValidationRanges[i].second);
+      f_rdf.Foreach(func, fCols);
+      chunkEntry += fValidationRanges[i].second - fValidationRanges[i].first;
+    }
+
+    for (int i = 0; i < fNumValidationEntries; i++) {
+    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+              ValidationTensor.GetData() + i * fNumCols);
+      
+    }
+    
   }
 
   void PrintTrainValidationVector() {
