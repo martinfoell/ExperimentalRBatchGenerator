@@ -10,7 +10,7 @@ void NewEpoch() {
   std::size_t rangeSize = 25;
   float validationSplit = 0.3;
   std::vector<std::string> columns = {"A"};
-  bool shuffle = false;
+  bool shuffle = true;
   
   RChunkLoader<Double_t> loader(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
   

@@ -53,24 +53,28 @@ class RChunkLoader {
   std::size_t fNumTrainEntries;
   std::size_t fNumValidationEntries;  
 
-  // chunks
+  // number of full training and validation chunks
   std::size_t fNumFullTrainChunks;
   std::size_t fNumFullValidationChunks;
 
+  // number of reminder training and validation chunks  
   std::size_t fNumReminderTrainChunks;
   std::size_t fNumReminderValidationChunks;
   
+  // size of reminder training and validation chunks    
   std::size_t fReminderTrainChunkSize;
   std::size_t fReminderValidationChunkSize;
 
+  // total number of training and validation chunks  
   std::size_t fNumTrainChunks;
   std::size_t fNumValidationChunks;
-  // ranges
 
+  // total number of full ranges, reminder ranges and total ranges in full chunks  
   std::size_t fNumFullChunkFullRanges;
   std::size_t fNumFullChunkReminderRanges;
   std::size_t fNumFullChunkRanges;    
 
+  // total number of full ranges, reminder ranges and total ranges in full chunks  
   std::size_t fNumReminderTrainChunkFullRanges;
   std::size_t fNumReminderValidationChunkFullRanges;
 
@@ -111,10 +115,6 @@ class RChunkLoader {
   std::vector<std::pair<Long64_t,Long64_t>> fTrainRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fValidationRanges;
 
-
-  std::vector<std::pair<Long64_t,Long64_t>> fShuffleTrainRanges;
-  std::vector<std::pair<Long64_t,Long64_t>> fShuffleValidationRanges;
-  
   std::vector<std::pair<Long64_t,Long64_t>> fFullTrainRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fReminderTrainRanges;  
 
