@@ -29,29 +29,72 @@ void SplitTrainValidation() {
   // std::size_t rangeSize = 20;  
 
 
-  float validationSplit = 0.5;
-  std::size_t chunkSize = 50;
-  std::size_t rangeSize = 20; // now working with 10
-  
-  std::vector<std::string> columns = {"A"};
 
+  std::size_t chunkSize = 100;
+  std::size_t rangeSize = 50;
+  float validationSplit = 0.3;
+  std::vector<std::string> columns = {"A"};
+  bool shuffle = false;
+  
+  RChunkLoader<Double_t> loader(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
+  
   TMVA::Experimental::RTensor<float> TrainTensor({0,0}); 
   TMVA::Experimental::RTensor<float> ValidationTensor({0,0}); 
   
-
-  bool shuffle = true;
-  RSplitTrainValidation<Double_t> splitTrainValidation(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
+  TMVA::Experimental::RTensor<float> TrainChunkTensor({0,0});
+  TMVA::Experimental::RTensor<float> ValidationChunkTensor({0,0});   
   
-  splitTrainValidation.PrintProperties();
-  // splitTrainValidation.PrintRangeVector();
-  
-  splitTrainValidation.Start();
-  splitTrainValidation.LoadTrainingDataset(TrainTensor);
-  splitTrainValidation.LoadValidationDataset(ValidationTensor);  
+  loader.Start();
 
-  std::cout << "Train" << std::endl;
+  loader.PrintChunkDistributions();
+  loader.PrintRangeDistributions();    
+  loader.LoadTrainingDataset(TrainTensor);
+  loader.LoadValidationDataset(ValidationTensor);  
+
+
+  std::cout << "Train: " << TrainTensor.GetSize() << std::endl;
   std::cout << TrainTensor << std::endl;
-  std::cout << "Validation" << std::endl;
-  std::cout << ValidationTensor << std::endl;  
+  std::cout << " " << std::endl;        
+
+  std::cout << "Validation: " << ValidationTensor.GetSize() << std::endl;
+  std::cout << ValidationTensor << std::endl;
+  std::cout << " " << std::endl;      
+
+  std::cout << "Checks:" << std::endl;
+  std::cout << "Training: ";
+  loader.CheckIfUnique(TrainTensor);
+  std::cout << "Validation: ";
+  loader.CheckIfUnique(ValidationTensor);
+  std::cout << "Overlap between training and validation tensors: ";
+  loader.CheckIfOverlap(TrainTensor, ValidationTensor);
+
+  std::cout << " " << std::endl;        
+
+  std::size_t numTrainChunks = loader.GetNumTrainChunks();
+
+  // loader.SplitTrainRanges();
+  // loader.CreateTrainRangeVector();
+  // for (int i = 0; i < numTrainChunks; i++) {
+  //   loader.LoadTrainChunk(TrainChunkTensor, i);
+  //   std::cout << "Train chunk " << i + 1 << ": " << TrainChunkTensor.GetSize() << std::endl;
+  //   std::cout << TrainChunkTensor << std::endl;
+  //   // Shuffle training ranges function
+
+  //   loader.LoadTrainChunk(TrainChunkTensor, i);      
+  //   std::cout << "Train chunk " << i + 1 << ": " << TrainChunkTensor.GetSize() << std::endl;
+  //   std::cout << TrainChunkTensor << std::endl;
+    
+  // }
+
+  // std::cout << " " << std::endl;        
+
+  // std::size_t numValidationChunks = loader.GetNumValidationChunks();
+
+  // for (int i = 0; i < numValidationChunks; i++) {
+  //   loader.LoadValidationChunk(ValidationChunkTensor, i);  
+  //   std::cout << "Validation chunk " << i + 1 << ": " << ValidationChunkTensor.GetSize() << std::endl;
+  //   std::cout << ValidationChunkTensor << std::endl;
+    
+  // }
 
 }

@@ -10,6 +10,8 @@
 #include <variant>
 #include <vector>
 #include <iostream>
+#include <list>
+#include <set>
 
 template <typename... ColTypes>
 class RRangeChunkLoaderFunctor {
@@ -41,7 +43,7 @@ class RRangeChunkLoaderFunctor {
 };
 
 template <typename... Args>
-class RSplitTrainValidation {
+class RChunkLoader {
  private:
   std::size_t fNumEntries;
   std::size_t fChunkSize;
@@ -61,16 +63,23 @@ class RSplitTrainValidation {
   std::size_t fReminderTrainChunkSize;
   std::size_t fReminderValidationChunkSize;
 
+  std::size_t fNumTrainChunks;
+  std::size_t fNumValidationChunks;
   // ranges
 
   std::size_t fNumFullChunkFullRanges;
-  std::size_t fNumFullChunkReminderRanges;  
+  std::size_t fNumFullChunkReminderRanges;
+  std::size_t fNumFullChunkRanges;    
 
   std::size_t fNumReminderTrainChunkFullRanges;
   std::size_t fNumReminderValidationChunkFullRanges;
 
   std::size_t fNumReminderTrainChunkReminderRanges;
   std::size_t fNumReminderValidationChunkReminderRanges;
+
+  std::size_t fNumReminderTrainChunkRanges;
+  std::size_t fNumReminderValidationChunkRanges;
+
   
   std::size_t fFullChunkReminderRangeSize;
   std::size_t fReminderTrainChunkReminderRangeSize;
@@ -96,12 +105,22 @@ class RSplitTrainValidation {
   
   std::vector<std::pair<Long64_t,Long64_t>> fFullRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fReminderRanges;
-  std::vector<std::pair<Long64_t,Long64_t>> fReminderTrainRanges;
-  std::vector<std::pair<Long64_t,Long64_t>> fReminderValidationRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fTrainRangesReminder;
+  std::vector<std::pair<Long64_t,Long64_t>> fValidationRangesReminder;
 
   std::vector<std::pair<Long64_t,Long64_t>> fTrainRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fValidationRanges;
+
+
+  std::vector<std::pair<Long64_t,Long64_t>> fShuffleTrainRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fShuffleValidationRanges;
   
+  std::vector<std::pair<Long64_t,Long64_t>> fFullTrainRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fReminderTrainRanges;  
+
+  std::vector<std::pair<Long64_t,Long64_t>> fFullValidationRanges;
+  std::vector<std::pair<Long64_t,Long64_t>> fReminderValidationRanges;  
+    
   ROOT::RDataFrame &f_rdf;
   std::vector<std::string> fCols;
   std::size_t fNumCols;
@@ -110,7 +129,7 @@ class RSplitTrainValidation {
   bool fShuffle;
 
  public:
-  RSplitTrainValidation(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
+  RChunkLoader(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
                         const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
     : f_rdf(rdf),
       fCols(cols),      
@@ -131,18 +150,23 @@ class RSplitTrainValidation {
     // chunks
     fNumFullTrainChunks = fNumTrainEntries / fChunkSize;
     fNumFullValidationChunks = fNumValidationEntries / fChunkSize;
-
+    fNumFullChunkRanges = fNumFullTrainChunks + fNumFullValidationChunks;
+    
     fReminderTrainChunkSize = fNumTrainEntries % fChunkSize;
     fReminderValidationChunkSize = fNumValidationEntries % fChunkSize;
     
     fNumReminderTrainChunks = fReminderTrainChunkSize == 0 ? 0 : 1;
     fNumReminderValidationChunks = fReminderValidationChunkSize == 0 ? 0 : 1;
+
+    fNumTrainChunks = fNumFullTrainChunks + fNumReminderTrainChunks;
+    fNumValidationChunks = fNumFullValidationChunks + fNumReminderValidationChunks;        
     
 
     // ranges
     fNumFullChunkFullRanges = fChunkSize / fRangeSize;
     fFullChunkReminderRangeSize = fChunkSize % fRangeSize;
     fNumFullChunkReminderRanges = fFullChunkReminderRangeSize == 0 ? 0 : 1;
+    fNumFullChunkRanges = fNumFullChunkFullRanges + fNumFullChunkReminderRanges;
     
     fReminderTrainChunkReminderRangeSize = fReminderTrainChunkSize % fRangeSize;
     fReminderValidationChunkReminderRangeSize = fReminderValidationChunkSize % fRangeSize;
@@ -152,6 +176,10 @@ class RSplitTrainValidation {
 
     fNumReminderTrainChunkReminderRanges = fReminderTrainChunkReminderRangeSize == 0 ? 0 : 1;
     fNumReminderValidationChunkReminderRanges = fReminderValidationChunkReminderRangeSize == 0 ? 0 : 1;
+
+    // tot ranges
+    fNumReminderTrainChunkRanges = fNumReminderTrainChunkFullRanges + fNumReminderTrainChunkReminderRanges;
+    fNumReminderValidationChunkRanges = fNumReminderValidationChunkFullRanges + fNumReminderValidationChunkReminderRanges;
     
     // tot
     fTotNumFullChunks = fNumFullTrainChunks + fNumFullValidationChunks;
@@ -181,12 +209,6 @@ class RSplitTrainValidation {
     RangeSizes.insert(RangeSizes.end(), fNumReminderTrainChunkReminderRanges , fReminderTrainChunkReminderRangeSize);
     RangeSizes.insert(RangeSizes.end(), fNumReminderValidationChunkReminderRanges, fReminderValidationChunkReminderRangeSize);        
 
-    // std::cout << "{";
-    // for (auto i : RangeSizes) {
-    //   std::cout << i << ", ";
-    // }
-    // std::cout << "}" << std::endl;
-    
     std::shuffle(RangeSizes.begin(), RangeSizes.end(), g);
 
 
@@ -211,26 +233,25 @@ class RSplitTrainValidation {
       }
       
       else if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fReminderTrainChunkReminderRangeSize) {
-        fReminderTrainRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
+        fTrainRangesReminder.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
       }
       
       else if (fPartialSumRangeSizes[i+1] - fPartialSumRangeSizes[i] == fReminderValidationChunkReminderRangeSize) {
-        fReminderValidationRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
+        fValidationRangesReminder.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i+1]));      
       }
     }
 
     std::shuffle(fFullRanges.begin(), fFullRanges.end(), g);
     std::shuffle(fReminderRanges.begin(), fReminderRanges.end(), g);
 
-    // move pairs if reminder is equal
-    // if ()
+    // corner cases if some of the reminder sizes are equal
     if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
          fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
          fFullChunkReminderRangeSize != 0 ) {
-      fReminderTrainRanges.push_back(fReminderRanges.back());
+      fTrainRangesReminder.push_back(fReminderRanges.back());
       fReminderRanges.pop_back();
 
-      fReminderValidationRanges.push_back(fReminderRanges.back());
+      fValidationRangesReminder.push_back(fReminderRanges.back());
       fReminderRanges.pop_back();
 
       std::cout << "i) Reminder range, reminder train range and reminder validation range are equal " << std::endl;
@@ -238,7 +259,7 @@ class RSplitTrainValidation {
 
     else if ( fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
               fFullChunkReminderRangeSize != 0) {
-      fReminderTrainRanges.push_back(fReminderRanges.back());
+      fTrainRangesReminder.push_back(fReminderRanges.back());
       fReminderRanges.pop_back();
 
       std::cout << "ii) Reminder range and reminder train range are equal " << std::endl;      
@@ -246,7 +267,7 @@ class RSplitTrainValidation {
 
     else if ( fFullChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
               fFullChunkReminderRangeSize != 0) {
-      fReminderValidationRanges.push_back(fReminderRanges.back());
+      fValidationRangesReminder.push_back(fReminderRanges.back());
       fReminderRanges.pop_back();
 
       std::cout << "iii) Reminder range and reminder validation range are equal " << std::endl;            
@@ -254,20 +275,69 @@ class RSplitTrainValidation {
 
     else if ( fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize and
               fReminderTrainChunkReminderRangeSize != 0) {
-      fReminderValidationRanges.push_back(fReminderTrainRanges.back());
-      fReminderTrainRanges.pop_back();
+      fValidationRangesReminder.push_back(fTrainRangesReminder.back());
+      fTrainRangesReminder.pop_back();
 
       std::cout << "iv) Reminder train range and reminder validation range are equal " << std::endl;                  
     }    
+
+    
+    // change to span later
+    fFullTrainRanges = std::vector<std::pair<Long64_t,Long64_t>>(fFullRanges.begin(), fFullRanges.begin() + fTotNumTrainFullRanges);
+    fReminderTrainRanges = std::vector<std::pair<Long64_t,Long64_t>>(fReminderRanges.begin(), fReminderRanges.begin() + fTotNumTrainReminderRanges);    
+
+    fFullValidationRanges = std::vector<std::pair<Long64_t,Long64_t>>(fFullRanges.begin() + fTotNumTrainFullRanges, fFullRanges.begin() + fTotNumTrainFullRanges + fTotNumValidationFullRanges);
+    fReminderValidationRanges = std::vector<std::pair<Long64_t,Long64_t>>(fReminderRanges.begin() + fTotNumTrainReminderRanges, fReminderRanges.begin() + fTotNumTrainReminderRanges + fTotNumValidationReminderRanges);    
+    
+    std::cout << fFullTrainRanges.size() << std::endl;
+    std::cout << fReminderTrainRanges.size() << std::endl;
+    
+    // std::cout << fFullValidationRanges.size() << std::endl;
+    // std::cout << fReminderValidationRanges.size() << std::endl;
   
   };    
 
+
+  void CreateTrainRangeVector() {
+
+    std::random_device rd;
+    std::mt19937 g(rd());
+    
+    // std::cout <<  << std::endl;
+    fTrainRanges = {};
+
+    std::shuffle(fFullTrainRanges.begin(), fFullTrainRanges.end(), g);
+    std::shuffle(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), g);
+
+    std::shuffle(fFullTrainRanges.begin(), fFullTrainRanges.end(), g);
+    std::shuffle(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), g);
+    
+    for (std::size_t i = 0; i < fNumFullTrainChunks; i++) {
+      std::size_t startFull = i*fNumFullChunkFullRanges;
+      std::size_t endFull = (i + 1)*fNumFullChunkFullRanges;
+
+      std::size_t startReminder = i*fNumFullChunkReminderRanges;
+      std::size_t endReminder = (i + 1)*fNumFullChunkReminderRanges;
+      
+      std::move(fFullTrainRanges.begin() + startFull, fFullTrainRanges.begin() + endFull, std::back_inserter(fTrainRanges));
+      std::move(fReminderTrainRanges.begin() + startReminder, fReminderTrainRanges.begin() + endReminder, std::back_inserter(fTrainRanges));      
+    }
+
+    std::size_t startFullReminder = fNumFullTrainChunks*fNumFullChunkFullRanges;
+    std::size_t endFullReminder = startFullReminder + fNumReminderTrainChunkFullRanges;    
+
+    // std::size_t startFullReminder = fNumFullTrainChunks*fNumFullChunkFullRanges;
+    std::size_t endReminderReminder = fNumReminderTrainChunkReminderRanges;
+    std::move(fReminderTrainRanges.begin() + startFullReminder, fReminderTrainRanges.begin() + endFullReminder, std::back_inserter(fTrainRanges));      
+    std::move(fTrainRangesReminder.begin(), fTrainRangesReminder.begin() + endReminderReminder, std::back_inserter(fTrainRanges));
+    
+  }
 
   void CreateTrainValidationRangeVectors() {
     int currentElementFullRanges = 0;
     int currentElementReminderRanges = 0;
 
-    // fill full chunk
+    // fill full Training chunk
     
     if (fNumFullTrainChunks != 0) {
       for (int i = 0; i < fNumFullTrainChunks; i++ ) {
@@ -292,12 +362,12 @@ class RSplitTrainValidation {
     }
     // fill reminder ranges
     if (fNumReminderTrainChunkReminderRanges != 0) {
-      std::move(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), std::back_inserter(fTrainRanges));
-      fReminderTrainRanges.erase(fReminderTrainRanges.begin(), fReminderTrainRanges.end());
+      std::move(fTrainRangesReminder.begin(), fTrainRangesReminder.end(), std::back_inserter(fTrainRanges));
+      fTrainRangesReminder.erase(fTrainRangesReminder.begin(), fTrainRangesReminder.end());
     }
 
 
-    // fill full chunk
+    // fill full Validation chunk
     
     if (fNumFullValidationChunks != 0) {    
       for (int i = 0; i < fNumFullValidationChunks; i++ ) {
@@ -322,8 +392,8 @@ class RSplitTrainValidation {
     }
     // fill reminder ranges
     if (fNumReminderValidationChunkReminderRanges != 0) {
-      std::move(fReminderValidationRanges.begin(), fReminderValidationRanges.end(), std::back_inserter(fValidationRanges));
-      fReminderValidationRanges.erase(fReminderValidationRanges.begin(), fReminderValidationRanges.end());
+      std::move(fValidationRangesReminder.begin(), fValidationRangesReminder.end(), std::back_inserter(fValidationRanges));
+      fValidationRangesReminder.erase(fValidationRangesReminder.begin(), fValidationRangesReminder.end());
     }
   }
 
@@ -338,7 +408,7 @@ class RSplitTrainValidation {
     TrainTensor = TrainTensor.Resize({{fNumTrainEntries, fNumCols}});
 
     std::vector<int> indices(fNumTrainEntries);
-    std::iota(indices.begin(), indices.end(), 0);  // Fill with 1, 2, ..., 100
+    std::iota(indices.begin(), indices.end(), 0);
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -367,7 +437,7 @@ class RSplitTrainValidation {
     ValidationTensor = ValidationTensor.Resize({{fNumValidationEntries, fNumCols}});
 
     std::vector<int> indices(fNumValidationEntries);
-    std::iota(indices.begin(), indices.end(), 0);  // Fill with 1, 2, ..., 100
+    std::iota(indices.begin(), indices.end(), 0);
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -392,9 +462,204 @@ class RSplitTrainValidation {
     
   }
 
+
+  void LoadTrainChunk(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk) {
+
+    if (chunk < fNumFullTrainChunks) {
+      TMVA::Experimental::RTensor<float> Tensor({fChunkSize, fNumCols});     
+      TrainChunkTensor = TrainChunkTensor.Resize({{fChunkSize, fNumCols}});
+
+      std::vector<int> indices(fChunkSize);
+      std::iota(indices.begin(), indices.end(), 0);
+
+      std::random_device rd;
+      std::mt19937 g(rd());
+    
+      if (fShuffle) {
+        std::shuffle(indices.begin(), indices.end(), g);
+      }
+    
+      std::size_t chunkEntry = 0;
+      for (std::size_t i = 0; i < fNumFullChunkRanges; i++) {
+        std::size_t entry = chunk*fNumFullChunkRanges + i;
+      
+        RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+        ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
+        f_rdf.Foreach(func, fCols);
+        chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
+      }
+
+      for (std::size_t i = 0; i < fChunkSize; i++) {
+        std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                  TrainChunkTensor.GetData() + i * fNumCols);
+      
+      }
+    }
+
+    else {
+      TMVA::Experimental::RTensor<float> Tensor({fReminderTrainChunkSize, fNumCols});     
+      TrainChunkTensor = TrainChunkTensor.Resize({{fReminderTrainChunkSize, fNumCols}});
+
+      std::vector<int> indices(fReminderTrainChunkSize);
+      std::iota(indices.begin(), indices.end(), 0);
+
+      std::random_device rd;
+      std::mt19937 g(rd());
+    
+      if (fShuffle) {
+        std::shuffle(indices.begin(), indices.end(), g);
+      }
+    
+      std::size_t chunkEntry = 0;
+      for (std::size_t i = 0; i < fNumReminderTrainChunkRanges; i++) {
+        std::size_t entry = chunk*fNumFullChunkRanges + i;
+      
+        RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+        ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
+        f_rdf.Foreach(func, fCols);
+        chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
+      }
+
+      for (std::size_t i = 0; i < fReminderTrainChunkSize; i++) {
+        std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                  TrainChunkTensor.GetData() + i * fNumCols);
+      
+      }
+    }
+    
+  }
+
+  void LoadValidationChunk(TMVA::Experimental::RTensor<float> &ValidationChunkTensor, std::size_t chunk) {
+
+    if (chunk < fNumFullValidationChunks) {
+      TMVA::Experimental::RTensor<float> Tensor({fChunkSize, fNumCols});     
+      ValidationChunkTensor = ValidationChunkTensor.Resize({{fChunkSize, fNumCols}});
+
+      std::vector<int> indices(fChunkSize);
+      std::iota(indices.begin(), indices.end(), 0);
+
+      std::random_device rd;
+      std::mt19937 g(rd());
+    
+      if (fShuffle) {
+        std::shuffle(indices.begin(), indices.end(), g);
+      }
+    
+      std::size_t chunkEntry = 0;
+      for (std::size_t i = 0; i < fNumFullChunkRanges; i++) {
+        std::size_t entry = chunk*fNumFullChunkRanges + i;
+      
+        RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+        ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fValidationRanges[entry].first, fValidationRanges[entry].second);
+        f_rdf.Foreach(func, fCols);
+        chunkEntry += fValidationRanges[entry].second - fValidationRanges[entry].first;
+      }
+
+      for (std::size_t i = 0; i < fChunkSize; i++) {
+        std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                  ValidationChunkTensor.GetData() + i * fNumCols);
+      
+      }
+    }
+
+    else {
+      TMVA::Experimental::RTensor<float> Tensor({fReminderValidationChunkSize, fNumCols});     
+      ValidationChunkTensor = ValidationChunkTensor.Resize({{fReminderValidationChunkSize, fNumCols}});
+
+      std::vector<int> indices(fReminderValidationChunkSize);
+      std::iota(indices.begin(), indices.end(), 0);
+
+      std::random_device rd;
+      std::mt19937 g(rd());
+    
+      if (fShuffle) {
+        std::shuffle(indices.begin(), indices.end(), g);
+      }
+    
+      std::size_t chunkEntry = 0;
+      for (std::size_t i = 0; i < fNumReminderValidationChunkRanges; i++) {
+        std::size_t entry = chunk*fNumFullChunkRanges + i;
+      
+        RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+        ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fValidationRanges[entry].first, fValidationRanges[entry].second);
+        f_rdf.Foreach(func, fCols);
+        chunkEntry += fValidationRanges[entry].second - fValidationRanges[entry].first;
+      }
+
+      for (std::size_t i = 0; i < fReminderValidationChunkSize; i++) {
+        std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                  ValidationChunkTensor.GetData() + i * fNumCols);
+      
+      }
+    }
+    
+  }
+
+  void CheckIfUnique(TMVA::Experimental::RTensor<float> &Tensor) {
+    auto tensorSize = Tensor.GetSize();
+    TMVA::Experimental::RTensor<float> SqueezeTensor  = Tensor.Reshape({1, tensorSize}).Squeeze();
+
+    std::list<int> allEntries;
+    for (int i = 0; i < tensorSize; i++) {
+      allEntries.push_back(SqueezeTensor(0,i));
+    }
+    allEntries.sort();
+    allEntries.unique();
+    if (allEntries.size() == tensorSize) {
+      std::cout << "Tensor consists of only unique elements" << std::endl;
+    }
+  };
+
+  void CheckIfOverlap(TMVA::Experimental::RTensor<float> &Tensor1, TMVA::Experimental::RTensor<float> &Tensor2) {  
+    auto tensorSize1 = Tensor1.GetSize();
+    TMVA::Experimental::RTensor<float> SqueezeTensor1  = Tensor1.Reshape({1, tensorSize1}).Squeeze();
+
+    std::list<int> allEntries1;
+    for (int i = 0; i < tensorSize1; i++) {
+      allEntries1.push_back(SqueezeTensor1(0,i));
+    }
+
+    auto tensorSize2 = Tensor2.GetSize();
+    TMVA::Experimental::RTensor<float> SqueezeTensor2  = Tensor2.Reshape({1, tensorSize2}).Squeeze();
+
+    std::list<int> allEntries2;
+    for (int i = 0; i < tensorSize2; i++) {
+      allEntries2.push_back(SqueezeTensor2(0,i));
+    }
+
+    std::set<int> result;
+
+    // Call the set_intersection(), which computes the
+    // intersection of set1 and set2 and
+    // inserts the result into the 'result' set
+    std::set<int> set1(allEntries1.begin(), allEntries1.end());
+    std::set<int> set2(allEntries2.begin(), allEntries2.end());        
+    std::set_intersection(set1.begin(), set1.end(), set2.begin(),
+                     set2.end(),
+                     inserter(result, result.begin()));    
+    // std::list<int> result = intersection(allEntries1, allEntries2);
+
+    if (result.size() == 0) {
+      std::cout << "No overlap between the tensors" << std::endl;
+    }
+    else {
+      std::cout << "Intersection between tensors: ";
+      for (int num : result) {
+        std::cout << num << " ";
+      }
+      std::cout << std::endl;
+    }
+  };
+  
+  std::size_t GetNumTrainChunks() {
+    return fNumTrainChunks;
+  }
+
+  std::size_t GetNumValidationChunks() {
+    return fNumValidationChunks;
+  }
+  
   void PrintTrainValidationVector() {
-    CreateRangeVector();
-    SplitRangeVector();
 
     std::cout << " " << std::endl;    
     std::cout << "Full ranges: " << fFullRanges.size() << std::endl;
@@ -415,18 +680,18 @@ class RSplitTrainValidation {
     std::cout << "-------------------------" << std::endl;
     std::cout << " " << std::endl;              
     
-    std::cout << "Reminder Train ranges: " << fReminderTrainRanges.size() << std::endl;
+    std::cout << "Reminder Train ranges: " << fTrainRangesReminder.size() << std::endl;
     std::cout << "-------------------------" << std::endl;      
-    for(auto i: fReminderTrainRanges) {
+    for(auto i: fTrainRangesReminder) {
       std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
     }
     std::cout << " " << std::endl;
     std::cout << "-------------------------" << std::endl;
     std::cout << " " << std::endl;              
 
-    std::cout << "Reminder Validation ranges: " << fReminderValidationRanges.size() << std::endl;
+    std::cout << "Reminder Validation ranges: " << fValidationRangesReminder.size() << std::endl;
     std::cout << "-------------------------" << std::endl;
-    for(auto i: fReminderValidationRanges) {
+    for(auto i: fValidationRangesReminder) {
       std::cout << "(" << i.first << ", " << i.second << ")" << ", ";    
     }
     std::cout << " " << std::endl;
@@ -456,7 +721,8 @@ class RSplitTrainValidation {
     
     
   }
-    
+
+  
   void PrintRangeVector() {
     std::cout << "{";
     for (auto i : fRangeVector) {
@@ -515,7 +781,7 @@ class RSplitTrainValidation {
     
   };
   
-  void PrintProperties() {
+  void PrintChunkDistributions() {
 
     const int colWidthS = 25;
     const int colWidth = 10;
@@ -536,6 +802,13 @@ class RSplitTrainValidation {
     PrintRow("Reminder", fNumReminderTrainChunks, fReminderTrainChunkSize, fNumReminderValidationChunks, fReminderValidationChunkSize, colWidthS, colWidth);
     std::cout << std::string(colWidthS + 4 * colWidth, '-') << std::endl;        
     std::cout << std::string(colWidthS + 4 * colWidth, ' ') << std::endl;    
+
+  }
+
+  void PrintRangeDistributions() {
+
+    const int colWidthS = 25;
+    const int colWidth = 10;
 
     std::cout << std::left;
     std::cout << "Full chunks" << std::endl;
@@ -569,4 +842,6 @@ class RSplitTrainValidation {
     std::cout << fTotNumFullRanges << " " << fTotNumReminderRanges << std::endl;
 
   }
+
+  
 };
