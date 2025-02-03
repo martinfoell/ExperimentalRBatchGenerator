@@ -211,7 +211,6 @@ class RChunkLoader {
 
     std::shuffle(RangeSizes.begin(), RangeSizes.end(), g);
 
-
     fPartialSumRangeSizes.resize(RangeSizes.size());
 
     std::partial_sum(RangeSizes.begin(), RangeSizes.end(), fPartialSumRangeSizes.begin());
@@ -289,12 +288,6 @@ class RChunkLoader {
     fFullValidationRanges = std::vector<std::pair<Long64_t,Long64_t>>(fFullRanges.begin() + fTotNumTrainFullRanges, fFullRanges.begin() + fTotNumTrainFullRanges + fTotNumValidationFullRanges);
     fReminderValidationRanges = std::vector<std::pair<Long64_t,Long64_t>>(fReminderRanges.begin() + fTotNumTrainReminderRanges, fReminderRanges.begin() + fTotNumTrainReminderRanges + fTotNumValidationReminderRanges);    
     
-    std::cout << fFullTrainRanges.size() << std::endl;
-    std::cout << fReminderTrainRanges.size() << std::endl;
-    
-    // std::cout << fFullValidationRanges.size() << std::endl;
-    // std::cout << fReminderValidationRanges.size() << std::endl;
-  
   };    
 
 
@@ -303,15 +296,12 @@ class RChunkLoader {
     std::random_device rd;
     std::mt19937 g(rd());
     
-    // std::cout <<  << std::endl;
     fTrainRanges = {};
 
     std::shuffle(fFullTrainRanges.begin(), fFullTrainRanges.end(), g);
     std::shuffle(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), g);
 
-    std::shuffle(fFullTrainRanges.begin(), fFullTrainRanges.end(), g);
-    std::shuffle(fReminderTrainRanges.begin(), fReminderTrainRanges.end(), g);
-    
+    // Fill full chunks
     for (std::size_t i = 0; i < fNumFullTrainChunks; i++) {
       std::size_t startFull = i*fNumFullChunkFullRanges;
       std::size_t endFull = (i + 1)*fNumFullChunkFullRanges;
@@ -323,84 +313,51 @@ class RChunkLoader {
       std::move(fReminderTrainRanges.begin() + startReminder, fReminderTrainRanges.begin() + endReminder, std::back_inserter(fTrainRanges));      
     }
 
+    // Fill reminder chunks
     std::size_t startFullReminder = fNumFullTrainChunks*fNumFullChunkFullRanges;
     std::size_t endFullReminder = startFullReminder + fNumReminderTrainChunkFullRanges;    
 
-    // std::size_t startFullReminder = fNumFullTrainChunks*fNumFullChunkFullRanges;
     std::size_t endReminderReminder = fNumReminderTrainChunkReminderRanges;
-    std::move(fReminderTrainRanges.begin() + startFullReminder, fReminderTrainRanges.begin() + endFullReminder, std::back_inserter(fTrainRanges));      
+    std::move(fFullTrainRanges.begin() + startFullReminder, fFullTrainRanges.begin() + endFullReminder, std::back_inserter(fTrainRanges));      
     std::move(fTrainRangesReminder.begin(), fTrainRangesReminder.begin() + endReminderReminder, std::back_inserter(fTrainRanges));
     
   }
 
-  void CreateTrainValidationRangeVectors() {
-    int currentElementFullRanges = 0;
-    int currentElementReminderRanges = 0;
+  void CreateValidationRangeVector() {
 
-    // fill full Training chunk
+    std::random_device rd;
+    std::mt19937 g(rd());
     
-    if (fNumFullTrainChunks != 0) {
-      for (int i = 0; i < fNumFullTrainChunks; i++ ) {
-        // fill full ranges 
-        std::move(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges, std::back_inserter(fTrainRanges));
-        fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges);
+    fValidationRanges = {};
 
-        // fill reminder ranges
-        if (fNumFullChunkReminderRanges != 0) {
-          std::move(fReminderRanges.begin(), fReminderRanges.begin() + 1, std::back_inserter(fTrainRanges));        
-          fReminderRanges.erase(fReminderRanges.begin(), fReminderRanges.begin() + 1);        
-        };
-      }
+    std::shuffle(fFullValidationRanges.begin(), fFullValidationRanges.end(), g);
+    std::shuffle(fReminderValidationRanges.begin(), fReminderValidationRanges.end(), g);
+
+    // Fill full chunks
+    for (std::size_t i = 0; i < fNumFullValidationChunks; i++) {
+      std::size_t startFull = i*fNumFullChunkFullRanges;
+      std::size_t endFull = (i + 1)*fNumFullChunkFullRanges;
+
+      std::size_t startReminder = i*fNumFullChunkReminderRanges;
+      std::size_t endReminder = (i + 1)*fNumFullChunkReminderRanges;
+      std::move(fFullValidationRanges.begin() + startFull, fFullValidationRanges.begin() + endFull, std::back_inserter(fValidationRanges));
+      std::move(fReminderValidationRanges.begin() + startReminder, fReminderValidationRanges.begin() + endReminder, std::back_inserter(fValidationRanges));      
     }
 
-    // fill reminder chunk
+    // Fill reminder chunk
+    std::size_t startFullReminder = fNumFullValidationChunks*fNumFullChunkFullRanges;
+    std::size_t endFullReminder = startFullReminder + fNumReminderValidationChunkFullRanges;    
 
-    // fill full ranges 
-    if (fNumReminderTrainChunkFullRanges != 0) {
-      std::move(fFullRanges.begin(), fFullRanges.begin() + fNumReminderTrainChunkFullRanges, std::back_inserter(fTrainRanges));
-      fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumReminderTrainChunkFullRanges);
-    }
-    // fill reminder ranges
-    if (fNumReminderTrainChunkReminderRanges != 0) {
-      std::move(fTrainRangesReminder.begin(), fTrainRangesReminder.end(), std::back_inserter(fTrainRanges));
-      fTrainRangesReminder.erase(fTrainRangesReminder.begin(), fTrainRangesReminder.end());
-    }
+    std::size_t endReminderReminder = fNumReminderValidationChunkReminderRanges;
+    std::move(fFullValidationRanges.begin() + startFullReminder , fFullValidationRanges.begin() + endFullReminder, std::back_inserter(fValidationRanges));          
+    std::move(fValidationRangesReminder.begin(), fValidationRangesReminder.begin() + endReminderReminder, std::back_inserter(fValidationRanges));
 
-
-    // fill full Validation chunk
-    
-    if (fNumFullValidationChunks != 0) {    
-      for (int i = 0; i < fNumFullValidationChunks; i++ ) {
-        // fill full ranges 
-        std::move(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges, std::back_inserter(fValidationRanges));
-        fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumFullChunkFullRanges);
-
-        // fill reminder ranges
-        if (fNumFullChunkReminderRanges != 0) {
-          std::move(fReminderRanges.begin(), fReminderRanges.begin() + 1, std::back_inserter(fValidationRanges));        
-          fReminderRanges.erase(fReminderRanges.begin(), fReminderRanges.begin() + 1);        
-        };
-      }
-    }
-
-    // fill reminder chunk
-
-    // fill full ranges 
-    if (fNumReminderValidationChunkFullRanges != 0) {
-      std::move(fFullRanges.begin(), fFullRanges.begin() + fNumReminderValidationChunkFullRanges, std::back_inserter(fValidationRanges));
-      fFullRanges.erase(fFullRanges.begin(), fFullRanges.begin() + fNumReminderValidationChunkFullRanges);
-    }
-    // fill reminder ranges
-    if (fNumReminderValidationChunkReminderRanges != 0) {
-      std::move(fValidationRangesReminder.begin(), fValidationRangesReminder.end(), std::back_inserter(fValidationRanges));
-      fValidationRangesReminder.erase(fValidationRangesReminder.begin(), fValidationRangesReminder.end());
-    }
   }
+  
 
   void Start() {
     CreateRangeVector();
     SplitRangeVector();
-    CreateTrainValidationRangeVectors();
   }
   
   void LoadTrainingDataset(TMVA::Experimental::RTensor<float> &TrainTensor) {
@@ -698,7 +655,7 @@ class RChunkLoader {
     std::cout << "-------------------------" << std::endl;
     std::cout << " " << std::endl;              
     
-    CreateTrainValidationRangeVectors();
+    // CreateTrainValidationRangeVectors();
 
     std::cout << " " << std::endl;
     std::cout << "Train ranges: " << fTrainRanges.size() << std::endl;
