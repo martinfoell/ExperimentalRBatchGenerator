@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <iostream>
 #include <vector>
 #include <thread>
@@ -126,28 +127,71 @@ class RBatchGenerator {
         std::cout << "Not filtered" << std::endl;
         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksNoFilters, this);
       } else {
-        std::cout << "Filtered" << std::endl;        
+        std::cout << "Filtered: needs to be implemented" << std::endl;        
         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksFilters, this);
       }
    }
   
+   /// @brief Load chunks when no filters are applied on rdataframe
+   // void LoadChunksNoFilters()
+   // {
+   //    for (std::size_t currentChunk = 0, currentEntry = 0;
+   //         ((currentChunk < fMaxChunks) || fUseWholeFile) && currentEntry < fNumEntries; currentChunk++) {
 
+   //       // stop the loop when the loading is not active anymore
+   //       {
+   //          std::lock_guard<std::mutex> lock(fIsActiveMutex);
+   //          if (!fIsActive)
+   //             return;
+   //       }
+
+   //       // A pair that consists the proccessed, and passed events while loading the chunk
+   //       std::size_t report = std::get<std::shared_ptr<RChunkLoader<Args...>>>(fChunkLoader)->LoadChunk(currentEntry);
+   //       currentEntry += report;
+
+   //       CreateBatches(report);
+   //    }
+
+   //    if (!fDropRemainder) {
+   //       fBatchLoader->LastBatches();
+   //    }
+
+   //    fBatchLoader->DeActivate();
+   // }
+
+
+  void Sleep(unsigned int seconds) {
+    usleep(seconds*1000);    
+    std::cout << "Slept for " << seconds << " seconds" << std::endl;
+  }
   
   TMVA::Experimental::RTensor<float> GenerateTrainBatch() {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
     std::cout << "Batches in queue: " << batchQueue << std::endl; 
-    if (batchQueue < 2) {
+    if (batchQueue < 6000) {
       std::cout << " " << std::endl;
-      fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
+      int Sleep1 = 1000;
+      // std::thread th1([this, Sleep1](){ this->Sleep(Sleep1); });
+      // std::thread th2([this, Sleep1](){ this->Sleep(Sleep1); });
+      std::thread load([this]() { fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum); });
+      load.join();
+      // std::thread t1(RBatchGenerator::add, 1);
+      // fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
       std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
-      std::cout << fTrainChunkTensor << std::endl;
+      // std::cout << fTrainChunkTensor << std::endl;
       std::cout << " " << std::endl;
-      fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);          
+      std::thread loadBatch([this]() { fBatchLoader->CreateTrainingBatches(fTrainChunkTensor); });
+      loadBatch.join();
+      
+      // fBatchLoader->CreateTrainingBatches(fTrainChunkTensor)
+;          
       fChunkNum++;
     }
     // Get next batch if available
     return fBatchLoader->GetTrainBatch();
   }
+
+  
 
   /// \brief Returns the next batch of validation data if available.
   /// Returns empty RTensor otherwise.
