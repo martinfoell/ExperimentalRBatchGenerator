@@ -1,11 +1,6 @@
-// #include "../inc/RChunkLoader.hxx"
-// #include "../inc/RBatchLoader.hxx"
 #include "../inc/RBatchGenerator.hxx"
 
-
-
 void generator() {
-
 
   ROOT::RDataFrame rdf("tree", "../data/file*.root");
 
@@ -15,13 +10,10 @@ void generator() {
   float validationSplit = 0.3;
   std::vector<std::string> columns = {"A"};
   bool shuffle = false;
-
-
   
   RBatchGenerator<Double_t> generator(rdf, chunkSize, rangeSize, batchSize, validationSplit, columns, shuffle);
 
-
-  for (std::size_t i = 0; i < 10; i++) {
+  for (std::size_t i = 0; i < 15; i++) {
     auto batch = generator.GenerateTrainBatch();
     std::cout << "Batch " << i + 1 << ": " << std::endl;
     std::cout << batch << std::endl;

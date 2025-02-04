@@ -8,7 +8,7 @@ void batch() {
 
   ROOT::RDataFrame rdf("tree", "../data/file*.root");
 
-  std::size_t chunkSize = 50;
+  std::size_t chunkSize = 75;
   std::size_t rangeSize = 10;
   float validationSplit = 0.3;
   std::vector<std::string> columns = {"A"};
@@ -29,7 +29,7 @@ void batch() {
   chunkLoader.PrintRangeDistributions();    
   
   chunkLoader.CreateRangeVector();
-  chunkLoader.SplitRangeVector();
+  chunkLoader.SortRangeVector();
 
   std::size_t numTrainChunks = chunkLoader.GetNumTrainChunks();
   std::size_t numValidationChunks = chunkLoader.GetNumValidationChunks();
@@ -56,24 +56,33 @@ void batch() {
 
   std::cout << "Make batches " << std::endl;
   chunkLoader.LoadTrainChunk(TrainChunkTensor, 0);
-  
-  RBatchLoader batchLoader(batchSize, columns.size(), maxBatches);
 
-  std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 0) << std::endl;
-  std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 1) << std::endl;
-  std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 2) << std::endl;
+  
+  RBatchLoader batchLoader(chunkSize, batchSize, columns.size());
+
+  // std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 0) << std::endl;
+  // std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 1) << std::endl;
+  // std::cout << *batchLoader.CreateBatch(TrainChunkTensor, 2) << std::endl;
 
   batchLoader.CreateTrainingBatches(TrainChunkTensor);
 
+  chunkLoader.LoadTrainChunk(TrainChunkTensor, 1);  
 
   
+  batchLoader.CreateTrainingBatches(TrainChunkTensor);
+  batchLoader.CreateTrainingBatches(TrainChunkTensor);  
+  
   std::cout << "Extract batche from queue " << std::endl;
+  auto NumBatchQueue = batchLoader.GetNumTrainingBatchQueue();
   auto batch = batchLoader.GetTrainBatch();
   std::cout << batch << std::endl;
   batch = batchLoader.GetTrainBatch();
   std::cout << batch << std::endl;
+  std::cout <<  NumBatchQueue << std::endl; 
   batch = batchLoader.GetTrainBatch();
+  NumBatchQueue = batchLoader.GetNumTrainingBatchQueue();
   std::cout << batch << std::endl;
+  std::cout <<  NumBatchQueue << std::endl;   
   batch = batchLoader.GetTrainBatch();
   std::cout << batch << std::endl;
   

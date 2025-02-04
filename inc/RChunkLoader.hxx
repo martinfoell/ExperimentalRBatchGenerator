@@ -130,7 +130,7 @@ class RChunkLoader {
 
  public:
   RChunkLoader(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
-                        const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
+               const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
     : f_rdf(rdf),
       fCols(cols),      
       fChunkSize(chunkSize),
@@ -144,44 +144,60 @@ class RChunkLoader {
     }
 
     fNumCols = fCols.size();
+
+    // number of training and validation entries after the split
     fNumValidationEntries = static_cast<std::size_t>(fValidationSplit * fNumEntries);
     fNumTrainEntries = fNumEntries - fNumValidationEntries;
 
-    // chunks
+    // number of full chunks for training and validetion
     fNumFullTrainChunks = fNumTrainEntries / fChunkSize;
     fNumFullValidationChunks = fNumValidationEntries / fChunkSize;
+
+    // total number of chunks from the dataset
     fNumFullChunkRanges = fNumFullTrainChunks + fNumFullValidationChunks;
     
+    // size of reminder chunk for training and validation
     fReminderTrainChunkSize = fNumTrainEntries % fChunkSize;
     fReminderValidationChunkSize = fNumValidationEntries % fChunkSize;
     
+    // number of reminder chunks for training and validation (0 or 1)
     fNumReminderTrainChunks = fReminderTrainChunkSize == 0 ? 0 : 1;
     fNumReminderValidationChunks = fReminderValidationChunkSize == 0 ? 0 : 1;
 
+    // total number of chunks for training and validation
     fNumTrainChunks = fNumFullTrainChunks + fNumReminderTrainChunks;
     fNumValidationChunks = fNumFullValidationChunks + fNumReminderValidationChunks;        
     
 
-    // ranges
+    // number fo full ranges in a full chunk
     fNumFullChunkFullRanges = fChunkSize / fRangeSize;
+    
+    // size of the reminder range in a full chunk
     fFullChunkReminderRangeSize = fChunkSize % fRangeSize;
+    
+    // number of reminder ranges in a full chunk (0 or 1)
     fNumFullChunkReminderRanges = fFullChunkReminderRangeSize == 0 ? 0 : 1;
+    
+    // total number of ranges in a full chunk
     fNumFullChunkRanges = fNumFullChunkFullRanges + fNumFullChunkReminderRanges;
     
+    // size of the reminder range in the reminder chunk for training and validation
     fReminderTrainChunkReminderRangeSize = fReminderTrainChunkSize % fRangeSize;
     fReminderValidationChunkReminderRangeSize = fReminderValidationChunkSize % fRangeSize;
 
+    // number of full ranges in the reminder chunk for training and validation
     fNumReminderTrainChunkFullRanges = fReminderTrainChunkSize / fRangeSize;
     fNumReminderValidationChunkFullRanges = fReminderValidationChunkSize / fRangeSize;;
 
+    // number of reminder ranges in the reminder chunk for training and validation
     fNumReminderTrainChunkReminderRanges = fReminderTrainChunkReminderRangeSize == 0 ? 0 : 1;
     fNumReminderValidationChunkReminderRanges = fReminderValidationChunkReminderRangeSize == 0 ? 0 : 1;
 
-    // tot ranges
+    // total number of ranges in the reminder chunk for training and validation
     fNumReminderTrainChunkRanges = fNumReminderTrainChunkFullRanges + fNumReminderTrainChunkReminderRanges;
     fNumReminderValidationChunkRanges = fNumReminderValidationChunkFullRanges + fNumReminderValidationChunkReminderRanges;
     
-    // tot
+    // total number of full and reminder chunks in the dataset (train + val)
     fTotNumFullChunks = fNumFullTrainChunks + fNumFullValidationChunks;
     fTotNumReminderChunks = fNumReminderTrainChunks + fNumReminderValidationChunks;
     
@@ -217,7 +233,8 @@ class RChunkLoader {
     fPartialSumRangeSizes.insert(fPartialSumRangeSizes.begin(), 0);
   };
 
-  void SplitRangeVector() {
+  
+  void SortRangeVector() {
 
     std::random_device rd;
     std::mt19937 g(rd());
@@ -357,7 +374,7 @@ class RChunkLoader {
 
   void Start() {
     CreateRangeVector();
-    SplitRangeVector();
+    SortRangeVector();
   }
   
   void LoadTrainingDataset(TMVA::Experimental::RTensor<float> &TrainTensor) {

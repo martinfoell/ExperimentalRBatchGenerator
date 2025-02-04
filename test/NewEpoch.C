@@ -10,7 +10,7 @@ void NewEpoch() {
   std::size_t rangeSize = 25;
   float validationSplit = 0.3;
   std::vector<std::string> columns = {"A"};
-  bool shuffle = true;
+  bool shuffle = false;
   
   RChunkLoader<Double_t> loader(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
   
@@ -24,7 +24,7 @@ void NewEpoch() {
   loader.PrintRangeDistributions();    
   
   loader.CreateRangeVector();
-  loader.SplitRangeVector();
+  loader.SortRangeVector();
 
   std::size_t numTrainChunks = loader.GetNumTrainChunks();
   std::size_t numValidationChunks = loader.GetNumValidationChunks();
@@ -61,8 +61,10 @@ void NewEpoch() {
   std::cout << "============== New Epoch =============" << std::endl;
   std::cout << " " << std::endl;        
   
+  // new epoch
   loader.CreateTrainRangeVector();
-  loader.CreateValidationRangeVector();  
+  loader.CreateValidationRangeVector();
+  
   loader.LoadTrainingDataset(TrainTensor);
   loader.LoadValidationDataset(ValidationTensor);    
 

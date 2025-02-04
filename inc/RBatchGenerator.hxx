@@ -32,17 +32,11 @@ class RBatchGenerator {
   std::unique_ptr<RChunkLoader<Args...>> fChunkLoader;
   std::unique_ptr<RBatchLoader> fBatchLoader;
 
-  std::unique_ptr<TMVA::Experimental::RTensor<float>> fChunkTensor;
-  std::unique_ptr<TMVA::Experimental::RTensor<float>> fCurrentBatch;
-
-  std::vector<std::vector<std::size_t>> fTrainingIdxs;
-  std::vector<std::vector<std::size_t>> fValidationIdxs;
-
   std::size_t fChunkNum;
   bool fShuffle;
 
   ROOT::RDataFrame &f_rdf;
-  // TMVA::Experimental::RTensor<float> fTrainTensor; 
+
   TMVA::Experimental::RTensor<float> fTrainTensor; 
   TMVA::Experimental::RTensor<float> fTrainChunkTensor;
   
@@ -70,43 +64,35 @@ class RBatchGenerator {
 
     fChunkLoader = std::make_unique<RChunkLoader<Args...>>(f_rdf, fChunkSize, fRangeSize, fValidationSplit, fCols, fShuffle);
     fBatchLoader = std::make_unique<RBatchLoader>(fChunkSize, fBatchSize, fNumColumns);
+    
+    fChunkLoader->PrintChunkDistributions();
+    fChunkLoader->PrintRangeDistributions();    
+
     fChunkLoader->CreateRangeVector();
-    fChunkLoader->SplitRangeVector();
+    fChunkLoader->SortRangeVector();
     fChunkLoader->CreateTrainRangeVector();
     fChunkLoader->CreateValidationRangeVector();      
+    
     fChunkLoader->LoadTrainingDataset(fTrainTensor);
     // fChunkLoader->LoadValidationDataset(fValidationTensor);        
-    
-    fChunkNum = 0;
+
     std::cout << "Train: " << fTrainTensor.GetSize() << std::endl;
     std::cout << fTrainTensor << std::endl;
     std::cout << " " << std::endl;        
-    // fChunkLoader->LoadTrainChunk(fTrainChunkTensor, 1);
-    // fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);    
-    // std::cout << "Train Chunk 1: " << fTrainChunkTensor.GetSize() << std::endl;
-    // std::cout << fTrainChunkTensor << std::endl;
-    // std::cout << " " << std::endl;        
-    
-    // std::cout << "Validation: " << fValidationTensor.GetSize() << std::endl;
-    // std::cout << fValidationTensor << std::endl;
-    // std::cout << " " << std::endl;        
 
+    fChunkNum = 0;    
   }
 
-  /// \brief Returns the next batch of training data if available.
-  /// Returns empty RTensor otherwise.
-  /// \return
-  // void test() {
-  //   std::cout << "the class is working" << std::endl; 
-  // }
   
   TMVA::Experimental::RTensor<float> GenerateTrainBatch() {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
     std::cout << "Batches in queue: " << batchQueue << std::endl; 
     if (batchQueue < 2) {
-      std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
+      std::cout << " " << std::endl;
       fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
+      std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
       std::cout << fTrainChunkTensor << std::endl;
+      std::cout << " " << std::endl;
       fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);          
       fChunkNum++;
     }
