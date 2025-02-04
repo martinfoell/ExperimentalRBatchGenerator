@@ -32,11 +32,16 @@ class RBatchGenerator {
   std::unique_ptr<RChunkLoader<Args...>> fChunkLoader;
   std::unique_ptr<RBatchLoader> fBatchLoader;
 
+  std::unique_ptr<std::thread> fLoadingThread;
+  
   std::size_t fChunkNum;
   bool fShuffle;
 
   ROOT::RDataFrame &f_rdf;
 
+  std::mutex fIsActiveMutex;
+  bool fIsActive{false}; // Whether the loading thread is active
+  bool fNotFiltered;
   TMVA::Experimental::RTensor<float> fTrainTensor; 
   TMVA::Experimental::RTensor<float> fTrainChunkTensor;
   
@@ -58,7 +63,8 @@ class RBatchGenerator {
       fTrainTensor({0, 0}),
       fTrainChunkTensor({0, 0}),
       fValidationTensor({0, 0}),
-      fValidationChunkTensor({0, 0})
+      fValidationChunkTensor({0, 0}),
+      fNotFiltered(f_rdf.GetFilterNames().empty())      
   
   {
 
@@ -82,6 +88,49 @@ class RBatchGenerator {
 
     fChunkNum = 0;    
   }
+
+  ~RBatchGenerator() { DeActivate(); }
+
+
+   void DeActivate()
+   {
+      {
+         std::lock_guard<std::mutex> lock(fIsActiveMutex);
+         fIsActive = false;
+      }
+
+      fBatchLoader->DeActivate();
+
+      if (fLoadingThread) {
+         if (fLoadingThread->joinable()) {
+            fLoadingThread->join();
+         }
+      }
+   }
+
+   /// \brief Activate the loading process by starting the batchloader, and
+   /// spawning the loading thread.
+   void Activate()
+   {
+      if (fIsActive)
+         return;
+
+      {
+         std::lock_guard<std::mutex> lock(fIsActiveMutex);
+         fIsActive = true;
+      }
+
+      fBatchLoader->Activate();
+      // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunks, this);
+      if (fNotFiltered) {
+        std::cout << "Not filtered" << std::endl;
+        // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksNoFilters, this);
+      } else {
+        std::cout << "Filtered" << std::endl;        
+        // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksFilters, this);
+      }
+   }
+  
 
   
   TMVA::Experimental::RTensor<float> GenerateTrainBatch() {

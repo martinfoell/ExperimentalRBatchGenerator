@@ -32,6 +32,7 @@ class RBatchLoader {
   std::size_t fNumChunkBatches;
   bool fIsActive = false;
 
+  std::mutex fBatchLock;
   std::condition_variable fBatchCondition;
 
   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTrainingBatchQueue;
@@ -57,6 +58,28 @@ class RBatchLoader {
 
  public:
 
+  void Activate()
+  {
+    // fTrainingRemainderRow = 0;
+    // fValidationRemainderRow = 0;
+
+    {
+      std::lock_guard<std::mutex> lock(fBatchLock);
+      fIsActive = true;
+    }
+    fBatchCondition.notify_all();
+  }
+
+  /// \brief DeActivate the batchloader. This means that no more batches are created.
+  /// Batches can still be returned if they are already loaded
+  void DeActivate()
+  {
+    {
+      std::lock_guard<std::mutex> lock(fBatchLock);
+      fIsActive = false;
+    }
+    fBatchCondition.notify_all();
+  }
 
 
   TMVA::Experimental::RTensor<float> GetTrainBatch()

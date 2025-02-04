@@ -1,4 +1,4 @@
-#include "../inc/RBatchGenerator.hxx"
+#include "../inc/RBatchGenerator_python.hxx"
 
 void generator() {
 
