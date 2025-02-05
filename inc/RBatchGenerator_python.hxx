@@ -38,8 +38,8 @@ class RBatchGenerator {
   std::size_t fChunkNum;
   bool fShuffle;
 
+    // ROOT::RDataFrame &f_rdf;
   ROOT::RDF::RNode &f_rdf;
-  // ROOT::RDataFrame &f_rdf;
 
   std::mutex fIsActiveMutex;
   bool fIsActive{false}; // Whether the loading thread is active
@@ -53,7 +53,7 @@ class RBatchGenerator {
 
  public:
   RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize, const std::size_t batchSize,
-                  const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
+                  const float validationSplit, bool shuffle, const std::vector<std::string> &cols)
     : f_rdf(rdf),
       fCols(cols),      
       fChunkSize(chunkSize),
@@ -169,7 +169,7 @@ class RBatchGenerator {
   TMVA::Experimental::RTensor<float> GenerateTrainBatch() {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
     std::cout << "Batches in queue: " << batchQueue << std::endl; 
-    if (batchQueue < 6000) {
+    if (batchQueue < 3) {
       std::cout << " " << std::endl;
       int Sleep1 = 1000;
       // std::thread th1([this, Sleep1](){ this->Sleep(Sleep1); });
