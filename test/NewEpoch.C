@@ -5,14 +5,14 @@
 void NewEpoch() {
 
   ROOT::RDataFrame rdf("tree", "../data/file*.root");
-
+  auto rdf_node = ROOT::RDF::AsRNode(rdf);
   std::size_t chunkSize = 50;
   std::size_t rangeSize = 25;
   float validationSplit = 0.3;
   std::vector<std::string> columns = {"A"};
   bool shuffle = false;
   
-  RChunkLoader<Double_t> loader(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
+  RChunkLoader<Double_t> loader(rdf_node, chunkSize,  rangeSize, validationSplit, columns, shuffle);
   
   TMVA::Experimental::RTensor<float> TrainTensor({0,0}); 
   TMVA::Experimental::RTensor<float> ValidationTensor({0,0}); 

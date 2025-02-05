@@ -7,7 +7,8 @@
 void batch() {
 
   ROOT::RDataFrame rdf("tree", "../data/file*.root");
-
+  auto rdf_node = ROOT::RDF::AsRNode(rdf);
+  
   std::size_t chunkSize = 75;
   std::size_t rangeSize = 10;
   float validationSplit = 0.3;
@@ -17,7 +18,7 @@ void batch() {
   std::size_t batchSize = 10;
   std::size_t maxBatches = 50;  
   
-  RChunkLoader<Double_t> chunkLoader(rdf, chunkSize,  rangeSize, validationSplit, columns, shuffle);
+  RChunkLoader<Double_t> chunkLoader(rdf_node, chunkSize,  rangeSize, validationSplit, columns, shuffle);
   
   TMVA::Experimental::RTensor<float> TrainTensor({0,0}); 
   TMVA::Experimental::RTensor<float> ValidationTensor({0,0}); 

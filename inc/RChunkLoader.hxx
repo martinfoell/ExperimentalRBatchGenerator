@@ -121,7 +121,8 @@ class RChunkLoader {
   std::vector<std::pair<Long64_t,Long64_t>> fFullValidationRanges;
   std::vector<std::pair<Long64_t,Long64_t>> fReminderValidationRanges;  
     
-  ROOT::RDataFrame &f_rdf;
+  ROOT::RDF::RNode &f_rdf;
+  // ROOT::RDataFrame &f_rdf;
   std::vector<std::string> fCols;
   std::size_t fNumCols;
 
@@ -129,7 +130,7 @@ class RChunkLoader {
   bool fShuffle;
 
  public:
-  RChunkLoader(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
+  RChunkLoader(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
                const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
     : f_rdf(rdf),
       fCols(cols),      

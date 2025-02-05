@@ -38,7 +38,8 @@ class RBatchGenerator {
   std::size_t fChunkNum;
   bool fShuffle;
 
-  ROOT::RDataFrame &f_rdf;
+  ROOT::RDF::RNode &f_rdf;
+  // ROOT::RDataFrame &f_rdf;
 
   std::mutex fIsActiveMutex;
   bool fIsActive{false}; // Whether the loading thread is active
@@ -51,7 +52,7 @@ class RBatchGenerator {
   
 
  public:
-  RBatchGenerator(ROOT::RDataFrame &rdf, const std::size_t chunkSize, const std::size_t rangeSize, const std::size_t batchSize,
+  RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize, const std::size_t batchSize,
                   const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
     : f_rdf(rdf),
       fCols(cols),      
