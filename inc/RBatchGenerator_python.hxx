@@ -49,8 +49,15 @@ class RBatchGenerator {
 
   bool fEpochActive{false};
 
+  std::size_t fNumFullTrainChunks;
+  std::size_t fReminderBatchSize;
+
+  
+
   TMVA::Experimental::RTensor<float> fTrainTensor; 
   TMVA::Experimental::RTensor<float> fTrainChunkTensor;
+
+  TMVA::Experimental::RTensor<float> fTrainBatchReminders;
   
   TMVA::Experimental::RTensor<float> fValidationTensor; 
   TMVA::Experimental::RTensor<float> fValidationChunkTensor;
@@ -70,6 +77,7 @@ class RBatchGenerator {
       fNumColumns(cols.size()),
       fTrainTensor({0, 0}),
       fTrainChunkTensor({0, 0}),
+      fTrainBatchReminders({0, 0}),            
       fValidationTensor({0, 0}),
       fValidationChunkTensor({0, 0}),
       fNotFiltered(f_rdf.GetFilterNames().empty())      
@@ -84,16 +92,16 @@ class RBatchGenerator {
 
     fChunkLoader->CreateRangeVector();
     fChunkLoader->SortRangeVector();
-    // fChunkLoader->CreateTrainRangeVector();
-    fChunkLoader->CreateValidationRangeVector();      
-    
-    // fChunkLoader->LoadTrainingDataset(fTrainTensor);
-    // // fChunkLoader->LoadValidationDataset(fValidationTensor);        
 
-    // std::cout << "Train: " << fTrainTensor.GetSize() << std::endl;
-    // std::cout << fTrainTensor << std::endl;
-    // std::cout << " " << std::endl;        
-     fCurrentEpoch = 0;  
+
+
+    fReminderBatchSize = fChunkSize % fBatchSize;
+    std::cout << "Reminder batch size: " << fReminderBatchSize << std::endl;
+    fNumFullTrainChunks = fChunkLoader->GetNumberOfFullTrainingChunks();
+    fTrainBatchReminders = fTrainBatchReminders.Resize({{fNumFullTrainChunks * fReminderBatchSize, fNumColumns}});            
+    std::cout << "Number of Training chunks " << fNumFullTrainChunks << std::endl;
+    
+    fCurrentEpoch = 0;  
 
     fChunkNum = 0;    
   }
@@ -101,6 +109,10 @@ class RBatchGenerator {
   ~RBatchGenerator() { DeActivate(); }
 
 
+  std::size_t GetNumberOfTrainingChunks() {
+    return fNumFullTrainChunks;
+  }
+  
    void DeActivate()
    {
       {
@@ -147,47 +159,48 @@ class RBatchGenerator {
   void DeActivateEpoch() {
     fEpochActive = false;
   }
+
   
-  void Sleep(unsigned int seconds) {
-    usleep(seconds*1000);    
-    std::cout << "Slept for " << seconds << " seconds" << std::endl;
-  }
   
   TMVA::Experimental::RTensor<float> GetTrainBatch() {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
-    std::cout << "Batches in queue: " << batchQueue << std::endl; 
-    // if (fCurrentEpoch < fNumEpochs && fChunkNum == 3) {
-    //   fChunkNum = 0;
-    //   fChunkLoader->CreateTrainRangeVector();
-    //   fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);      
-    //   fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
-    //   batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
-    //   std::cout << "Something happening here?" << std::endl;
-    //   fCurrentEpoch++;
-    // }
+    // std::cout << "Batches in queue: " << batchQueue << std::endl; 
+    
     if (fEpochActive == false) {
-        fChunkLoader->CreateTrainRangeVector();        
-        fEpochActive = true;
-        fChunkNum = 0;
-      }
-    std::cout << "Is active: " << fIsActive << std::endl;
-    std::cout << "Is active epoch: " << fEpochActive << std::endl;
-    if (batchQueue < 3 && fChunkNum < 3) {
-      std::cout << " " << std::endl;
-      std::thread load([this]() { fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum); });
-      load.join();
-      // std::thread t1(RBatchGenerator::add, 1);
-      // fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
-      std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
-      // std::cout << fTrainChunkTensor << std::endl;
-      std::cout << " " << std::endl;
-      std::thread loadBatch([this]() { fBatchLoader->CreateTrainingBatches(fTrainChunkTensor); });
-      loadBatch.join();
+      std::cout << "------------ New Epoch ------------" << std::endl;
+      fChunkLoader->CreateTrainRangeVector();     
+      fEpochActive = true;
+      fChunkNum = 0;
+    }
+
+    if (batchQueue < 1 && fChunkNum < fNumFullTrainChunks) {
+
+      fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
+      fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
+      fBatchLoader->SaveReminderBatch(fTrainChunkTensor, fTrainBatchReminders, fChunkNum);
       
-      // fBatchLoader->CreateTrainingBatches(fTrainChunkTensor)
-;          
+      // std::cout << " " << std::endl;      
+      // std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
+      // std::cout << fTrainChunkTensor << std::endl;
+      // std::cout << " " << std::endl;
+
+      // std::cout << "Saved reminder batch from chunk: " << std::endl;
+      // std::cout << fTrainBatchReminders << std::endl;
+      // std::cout << " " << std::endl;      
+      // std::cout << "Reminder batch: " << *batch << std::endl;      
+
+      
       fChunkNum++;
     }
+
+    // else if (batchQueue < 1 && fChunkNum == fNumFullTrainChunks) {
+    //   fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
+    //   fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
+    //   fBatchLoader->SaveReminderBatch(fTrainChunkTensor, fTrainBatchReminders, fChunkNum);
+      
+    //   std::cout << "Reminder batches here " << std::endl;
+    //   fChunkNum++;
+    // }
     // Get next batch if available
     return fBatchLoader->GetTrainBatch();
   }

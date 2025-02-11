@@ -352,39 +352,15 @@ class TrainRBatchGenerator:
         Yields:
             Union[np.NDArray, torch.Tensor]: A batch of data
         """
-        # self.base_generator.ActivateEpoch()
-        # ActivateEpoch()        
-        print("Testing")
-        # with LoadingThreadContext(self.base_generator):
+        
         while True:
             batch = self.base_generator.GetTrainBatch()
-            # self.base_generator.DeActivateEpoch()                                    
             if batch is None:
                 self.base_generator.DeActivateEpoch()                    
-                print("No more batches")
                 break
             yield self.conversion_function(batch)
         
-        return None
-
-    # def __call__(self) -> Any:
-    #     """Start the loading of batches and Yield the results
-
-    #     Yields:
-    #         Union[np.NDArray, torch.Tensor]: A batch of data
-    #     """
-
-    #     with LoadingThreadContext(self.base_generator):
-    #         while True:
-    #             batch = self.base_generator.GetTrainBatch()
-
-    #             if batch is None:
-    #                 break
-
-    #             yield self.conversion_function(batch)
-
-    #     return None
-    
+        return None    
 
 class ValidationRBatchGenerator:
     def __init__(self, base_generator: BaseGenerator, conversion_function: Callable):

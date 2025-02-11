@@ -30,6 +30,8 @@ class RBatchLoader {
 
 
   std::size_t fNumChunkBatches;
+  std::size_t fChunkReminderBatchSize;
+  
   bool fIsActive = false;
 
   std::mutex fBatchLock;
@@ -54,6 +56,7 @@ class RBatchLoader {
   {
     fNumTrainingBatchQueue = fTrainingBatchQueue.size();
     fNumChunkBatches = fChunkSize / fBatchSize;
+    fChunkReminderBatchSize = fChunkSize % fBatchSize;
   }
 
  public:
@@ -84,8 +87,6 @@ class RBatchLoader {
 
   TMVA::Experimental::RTensor<float> GetTrainBatch()
   {
-    // std::unique_lock<std::mutex> lock(fBatchLock);
-    // fBatchCondition.wait(lock, [this]() { return !fTrainingBatchQueue.empty() || !fIsActive; });
 
     if (fTrainingBatchQueue.empty()) {
       fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
@@ -94,8 +95,8 @@ class RBatchLoader {
 
     fCurrentBatch = std::move(fTrainingBatchQueue.front());
     fTrainingBatchQueue.pop();
-    // fBatchCondition.notify_all();
 
+    // std::cout << *fCurrentBatch << std::endl;
     return *fCurrentBatch;
   }
   
@@ -111,6 +112,14 @@ class RBatchLoader {
     return batch;
   }
 
+
+  void SaveReminderBatch(TMVA::Experimental::RTensor<float> &chunkTensor, TMVA::Experimental::RTensor<float> &reminderBatchesTensor, std::size_t idxs)
+  {
+    std::copy(chunkTensor.GetData() + (fNumChunkBatches * fBatchSize * fNumColumns),
+              chunkTensor.GetData() + (fNumChunkBatches *  fBatchSize * fNumColumns + fChunkReminderBatchSize * fNumColumns),
+              reminderBatchesTensor.GetData() + (idxs * fChunkReminderBatchSize * fNumColumns));
+  }
+  
   void CreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
   {
 
@@ -127,6 +136,8 @@ class RBatchLoader {
     }
       
   }
+
+  // void CopyReminderBatch()
 
   // std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> GetTrainingBatchQueue() {
   //   return fTrainingBatchQueue;
