@@ -36,6 +36,8 @@ class RBatchGenerator {
   std::unique_ptr<std::thread> fLoadingThread;
   
   std::size_t fChunkNum;
+  std::size_t fNumEpochs;
+  std::size_t fCurrentEpoch;  
   bool fShuffle;
 
     // ROOT::RDataFrame &f_rdf;
@@ -44,6 +46,9 @@ class RBatchGenerator {
   std::mutex fIsActiveMutex;
   bool fIsActive{false}; // Whether the loading thread is active
   bool fNotFiltered;
+
+  bool fEpochActive{false};
+
   TMVA::Experimental::RTensor<float> fTrainTensor; 
   TMVA::Experimental::RTensor<float> fTrainChunkTensor;
   
@@ -52,11 +57,12 @@ class RBatchGenerator {
   
 
  public:
-  RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize, const std::size_t batchSize,
+  RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t numEpochs, const std::size_t chunkSize, const std::size_t rangeSize, const std::size_t batchSize,
                   const float validationSplit, bool shuffle, const std::vector<std::string> &cols)
     : f_rdf(rdf),
       fCols(cols),      
-      fChunkSize(chunkSize),
+      fNumEpochs(numEpochs),
+      fChunkSize(chunkSize),      
       fRangeSize(rangeSize),
       fBatchSize(batchSize),        
       fValidationSplit(validationSplit),
@@ -78,7 +84,7 @@ class RBatchGenerator {
 
     fChunkLoader->CreateRangeVector();
     fChunkLoader->SortRangeVector();
-    fChunkLoader->CreateTrainRangeVector();
+    // fChunkLoader->CreateTrainRangeVector();
     fChunkLoader->CreateValidationRangeVector();      
     
     // fChunkLoader->LoadTrainingDataset(fTrainTensor);
@@ -87,6 +93,7 @@ class RBatchGenerator {
     // std::cout << "Train: " << fTrainTensor.GetSize() << std::endl;
     // std::cout << fTrainTensor << std::endl;
     // std::cout << " " << std::endl;        
+     fCurrentEpoch = 0;  
 
     fChunkNum = 0;    
   }
@@ -132,48 +139,41 @@ class RBatchGenerator {
         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksFilters, this);
       }
    }
+
+  void ActivateEpoch() {
+    fEpochActive = true;
+  }
+
+  void DeActivateEpoch() {
+    fEpochActive = false;
+  }
   
-   /// @brief Load chunks when no filters are applied on rdataframe
-   // void LoadChunksNoFilters()
-   // {
-   //    for (std::size_t currentChunk = 0, currentEntry = 0;
-   //         ((currentChunk < fMaxChunks) || fUseWholeFile) && currentEntry < fNumEntries; currentChunk++) {
-
-   //       // stop the loop when the loading is not active anymore
-   //       {
-   //          std::lock_guard<std::mutex> lock(fIsActiveMutex);
-   //          if (!fIsActive)
-   //             return;
-   //       }
-
-   //       // A pair that consists the proccessed, and passed events while loading the chunk
-   //       std::size_t report = std::get<std::shared_ptr<RChunkLoader<Args...>>>(fChunkLoader)->LoadChunk(currentEntry);
-   //       currentEntry += report;
-
-   //       CreateBatches(report);
-   //    }
-
-   //    if (!fDropRemainder) {
-   //       fBatchLoader->LastBatches();
-   //    }
-
-   //    fBatchLoader->DeActivate();
-   // }
-
-
   void Sleep(unsigned int seconds) {
     usleep(seconds*1000);    
     std::cout << "Slept for " << seconds << " seconds" << std::endl;
   }
   
-  TMVA::Experimental::RTensor<float> GenerateTrainBatch() {
+  TMVA::Experimental::RTensor<float> GetTrainBatch() {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
     std::cout << "Batches in queue: " << batchQueue << std::endl; 
-    if (batchQueue < 3) {
+    // if (fCurrentEpoch < fNumEpochs && fChunkNum == 3) {
+    //   fChunkNum = 0;
+    //   fChunkLoader->CreateTrainRangeVector();
+    //   fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);      
+    //   fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
+    //   batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
+    //   std::cout << "Something happening here?" << std::endl;
+    //   fCurrentEpoch++;
+    // }
+    if (fEpochActive == false) {
+        fChunkLoader->CreateTrainRangeVector();        
+        fEpochActive = true;
+        fChunkNum = 0;
+      }
+    std::cout << "Is active: " << fIsActive << std::endl;
+    std::cout << "Is active epoch: " << fEpochActive << std::endl;
+    if (batchQueue < 3 && fChunkNum < 3) {
       std::cout << " " << std::endl;
-      int Sleep1 = 1000;
-      // std::thread th1([this, Sleep1](){ this->Sleep(Sleep1); });
-      // std::thread th2([this, Sleep1](){ this->Sleep(Sleep1); });
       std::thread load([this]() { fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum); });
       load.join();
       // std::thread t1(RBatchGenerator::add, 1);

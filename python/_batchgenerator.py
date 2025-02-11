@@ -52,6 +52,7 @@ class BaseGenerator:
     def __init__(
         self,
         rdataframe: RNode,
+        num_epochs: int,                
         chunk_size: int,        
         range_size: int,                    
         batch_size: int,
@@ -137,6 +138,7 @@ class BaseGenerator:
 
         self.num_columns = len(self.all_columns)
         self.batch_size = batch_size
+        self.num_epochs = num_epochs
 
         # Handle target
         self.target_given = len(self.target_columns) > 0
@@ -170,6 +172,7 @@ class BaseGenerator:
 
         self.generator = ROOT.RBatchGenerator(template)(
             self.noded_rdf,
+            num_epochs,
             chunk_size,
             range_size,
             batch_size,
@@ -191,6 +194,16 @@ class BaseGenerator:
     def DeActivate(self):
         """Deactivate the generator"""
         self.generator.DeActivate()
+
+    def ActivateEpoch(self):
+        """Start the loading of training batches"""
+        self.generator.ActivateEpoch()
+
+    def DeActivateEpoch(self):
+        """Stop the loading of batches"""
+
+        self.generator.DeActivateEpoch()
+        
 
 
     def ConvertBatchToPyTorch(self, batch: Any) -> torch.Tensor:
@@ -218,15 +231,6 @@ class BaseGenerator:
             train_data = return_data[:, self.train_indices]
             target_data = return_data[:, self.target_indices]
 
-            # # Splice weight column from the data if weight is given
-            # if self.weights_given:
-            #     weights_data = return_data[:, self.weights_index]
-
-            #     if len(self.target_indices) == 1:
-            #         return train_data, target_data.reshape(-1, 1), weights_data.reshape(-1, 1)
-
-            #     return train_data, target_data, weights_data.reshape(-1, 1)
-
             if len(self.target_indices) == 1:
                 return train_data, target_data.reshape(-1, 1)
 
@@ -250,19 +254,6 @@ class BaseGenerator:
         return None
 
     # Return a batch when available
-    def GenerateTrainBatch(self) -> Any:
-        """Return the next training batch of data from the given RDataFrame
-
-        Returns:
-            (np.ndarray): Batch of data of size.
-        """
-
-        batch = self.generator.GenerateTrainBatch()
-
-        if batch and batch.GetSize() > 0:
-            return batch
-
-        return None
     
     def GetValidationBatch(self) -> Any:
         """Return the next training batch of data from the given RDataFrame
@@ -293,6 +284,7 @@ class LoadingThreadContext:
 
 
 class TrainRBatchGenerator:
+
     def __init__(self, base_generator: BaseGenerator, conversion_function: Callable):
         """
         A generator that returns the training batches of the given
@@ -316,6 +308,7 @@ class TrainRBatchGenerator:
 
         self.base_generator.DeActivate()
 
+        
     @property
     def columns(self) -> list[str]:
         return self.base_generator.all_columns
@@ -359,18 +352,39 @@ class TrainRBatchGenerator:
         Yields:
             Union[np.NDArray, torch.Tensor]: A batch of data
         """
-
-        with LoadingThreadContext(self.base_generator):
-            while True:
-                batch = self.base_generator.GetTrainBatch()
-
-                if batch is None:
-                    break
-
-                yield self.conversion_function(batch)
-
+        # self.base_generator.ActivateEpoch()
+        # ActivateEpoch()        
+        print("Testing")
+        # with LoadingThreadContext(self.base_generator):
+        while True:
+            batch = self.base_generator.GetTrainBatch()
+            # self.base_generator.DeActivateEpoch()                                    
+            if batch is None:
+                self.base_generator.DeActivateEpoch()                    
+                print("No more batches")
+                break
+            yield self.conversion_function(batch)
+        
         return None
 
+    # def __call__(self) -> Any:
+    #     """Start the loading of batches and Yield the results
+
+    #     Yields:
+    #         Union[np.NDArray, torch.Tensor]: A batch of data
+    #     """
+
+    #     with LoadingThreadContext(self.base_generator):
+    #         while True:
+    #             batch = self.base_generator.GetTrainBatch()
+
+    #             if batch is None:
+    #                 break
+
+    #             yield self.conversion_function(batch)
+
+    #     return None
+    
 
 class ValidationRBatchGenerator:
     def __init__(self, base_generator: BaseGenerator, conversion_function: Callable):
@@ -445,17 +459,14 @@ class ValidationRBatchGenerator:
 
 def CreatePyTorchGenerators(
     rdataframe: RNode,
+    num_epochs: int,            
+    chunk_size: int,        
+    range_size: int,                    
     batch_size: int,
-    chunk_size: int,
     columns: list[str] = list(),
-    max_vec_sizes: dict[str, int] = dict(),
-    vec_padding: int = 0,
     target: str | list[str] = list(),
-    weights: str = "",
-    validation_split: float = 0.0,
-    max_chunks: int = 0,
+    validation_split: float = 0,
     shuffle: bool = True,
-    drop_remainder=True,
 ) -> Tuple[TrainRBatchGenerator, ValidationRBatchGenerator]:
     """
     Return two Tensorflow Datasets based on the given ROOT file and tree or RDataFrame
@@ -509,17 +520,14 @@ def CreatePyTorchGenerators(
     """
     base_generator = BaseGenerator(
         rdataframe,
-        batch_size,
+        num_epochs,
         chunk_size,
+        range_size,
+        batch_size,
         columns,
-        max_vec_sizes,
-        vec_padding,
         target,
-        weights,
         validation_split,
-        max_chunks,
         shuffle,
-        drop_remainder,
     )
 
     train_generator = TrainRBatchGenerator(
@@ -529,8 +537,12 @@ def CreatePyTorchGenerators(
     if validation_split == 0.0:
         return train_generator
 
-    validation_generator = ValidationRBatchGenerator(
-        base_generator, base_generator.ConvertBatchToPyTorch
-    )
+    # validation_generator = ValidationRBatchGenerator(
+    #     base_generator, base_generator.ConvertBatchToPyTorch
+    # )
+    
+    validation_generator = 0
+    
+    
 
     return train_generator, validation_generator
