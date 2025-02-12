@@ -50,6 +50,7 @@ class RBatchGenerator {
   bool fEpochActive{false};
 
   std::size_t fNumFullTrainChunks;
+  std::size_t fNumFullValidationChunks;
   std::size_t fReminderBatchSize;
 
   
@@ -97,7 +98,10 @@ class RBatchGenerator {
 
     fReminderBatchSize = fChunkSize % fBatchSize;
     std::cout << "Reminder batch size: " << fReminderBatchSize << std::endl;
+    
     fNumFullTrainChunks = fChunkLoader->GetNumberOfFullTrainingChunks();
+    fNumFullValidationChunks = fChunkLoader->GetNumberOfFullValidationChunks();
+    
     fTrainBatchReminders = fTrainBatchReminders.Resize({{fNumFullTrainChunks * fReminderBatchSize, fNumColumns}});            
     std::cout << "Number of Training chunks " << fNumFullTrainChunks << std::endl;
     
@@ -166,8 +170,8 @@ class RBatchGenerator {
     auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
     // std::cout << "Batches in queue: " << batchQueue << std::endl; 
     
+    // New epoch
     if (fEpochActive == false) {
-      std::cout << "------------ New Epoch ------------" << std::endl;
       fChunkLoader->CreateTrainRangeVector();     
       fEpochActive = true;
       fChunkNum = 0;
@@ -193,18 +197,31 @@ class RBatchGenerator {
       fChunkNum++;
     }
 
-    // else if (batchQueue < 1 && fChunkNum == fNumFullTrainChunks) {
-    //   fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
-    //   fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
-    //   fBatchLoader->SaveReminderBatch(fTrainChunkTensor, fTrainBatchReminders, fChunkNum);
-      
-    //   std::cout << "Reminder batches here " << std::endl;
-    //   fChunkNum++;
-    // }
     // Get next batch if available
     return fBatchLoader->GetTrainBatch();
   }
 
+  TMVA::Experimental::RTensor<float> GetValidationBatch() {
+    auto batchQueue = fBatchLoader->GetNumValidationBatchQueue();
+    
+    // New epoch
+    if (fEpochActive == false) {
+      fChunkLoader->CreateValidationRangeVector();     
+      fEpochActive = true;
+      fChunkNum = 0;
+    }
+
+    if (batchQueue < 1 && fChunkNum < fNumFullValidationChunks) {
+
+      fChunkLoader->LoadValidationChunk(fValidationChunkTensor, fChunkNum);
+      fBatchLoader->CreateValidationBatches(fValidationChunkTensor);
+      
+      fChunkNum++;
+    }
+    // Get next batch if available
+    return fBatchLoader->GetValidationBatch();
+  }
+  
   
 
   /// \brief Returns the next batch of validation data if available.

@@ -41,6 +41,8 @@ class RBatchLoader {
   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fValidationBatchQueue;
 
   std::size_t fNumTrainingBatchQueue;
+  std::size_t fNumValidationBatchQueue;
+  
   std::unique_ptr<TMVA::Experimental::RTensor<float>> fCurrentBatch;
 
   std::unique_ptr<TMVA::Experimental::RTensor<float>> fTrainingRemainder;
@@ -55,6 +57,8 @@ class RBatchLoader {
         
   {
     fNumTrainingBatchQueue = fTrainingBatchQueue.size();
+    fNumValidationBatchQueue = fValidationBatchQueue.size();
+    
     fNumChunkBatches = fChunkSize / fBatchSize;
     fChunkReminderBatchSize = fChunkSize % fBatchSize;
   }
@@ -99,6 +103,20 @@ class RBatchLoader {
     // std::cout << *fCurrentBatch << std::endl;
     return *fCurrentBatch;
   }
+
+  TMVA::Experimental::RTensor<float> GetValidationBatch()
+  {
+
+    if (fValidationBatchQueue.empty()) {
+      fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
+      return *fCurrentBatch;
+    }
+    fCurrentBatch = std::move(fValidationBatchQueue.front());
+    fValidationBatchQueue.pop();
+
+    // std::cout << *fCurrentBatch << std::endl;
+    return *fCurrentBatch;
+  }
   
   /// \brief Return a batch of data as a unique pointer.
   /// After the batch has been processed, it should be destroyed.
@@ -125,7 +143,6 @@ class RBatchLoader {
 
     std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
       
-    std::cout << "Num batches in chunk " << fNumChunkBatches << std::endl; 
     for (std::size_t i = 0; i < fNumChunkBatches; i++) {
       // Fill a batch
       batches.emplace_back(CreateBatch(chunkTensor, i));
@@ -137,6 +154,22 @@ class RBatchLoader {
       
   }
 
+  void CreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
+  {
+
+    std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
+      
+    for (std::size_t i = 0; i < fNumChunkBatches; i++) {
+      // Fill a batch
+      batches.emplace_back(CreateBatch(chunkTensor, i));
+    }
+      
+    for (std::size_t i = 0; i < batches.size(); i++) {
+      fValidationBatchQueue.push(std::move(batches[i]));
+    }
+      
+  }
+  
   // void CopyReminderBatch()
 
   // std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> GetTrainingBatchQueue() {
@@ -147,5 +180,9 @@ class RBatchLoader {
     return fTrainingBatchQueue.size();
   }
 
+  std::size_t GetNumValidationBatchQueue() {
+    return fValidationBatchQueue.size();
+  }
+  
 };
 

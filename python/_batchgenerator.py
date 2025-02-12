@@ -203,6 +203,15 @@ class BaseGenerator:
         """Stop the loading of batches"""
 
         self.generator.DeActivateEpoch()
+
+    def ActivateEpochvalidation(self):
+        """Start the loading of training batches"""
+        self.generator.ActivateEpochValidation()
+
+    def DeActivateEpochValidation(self):
+        """Stop the loading of batches"""
+
+        self.generator.DeActivateEpochValidation()
         
 
 
@@ -363,11 +372,11 @@ class TrainRBatchGenerator:
         return None    
 
 class ValidationRBatchGenerator:
+
     def __init__(self, base_generator: BaseGenerator, conversion_function: Callable):
         """
-        A generator that returns the validation batches of the given base
-        generator. NOTE: The ValidationRBatchGenerator only returns batches
-        if the training has been run.
+        A generator that returns the training batches of the given
+        base generator
 
         Args:
             base_generator (BaseGenerator):
@@ -378,6 +387,16 @@ class ValidationRBatchGenerator:
         self.base_generator = base_generator
         self.conversion_function = conversion_function
 
+    def Activate(self):
+        """Start the loading of training batches"""
+        self.base_generator.Activate()
+
+    def DeActivate(self):
+        """Stop the loading of batches"""
+
+        self.base_generator.DeActivate()
+
+        
     @property
     def columns(self) -> list[str]:
         return self.base_generator.all_columns
@@ -396,11 +415,11 @@ class ValidationRBatchGenerator:
 
     @property
     def number_of_batches(self) -> int:
-        return self.base_generator.generator.NumberOfValidationBatches()
+        return self.base_generator.generator.NumberOfTrainingBatches()
 
     @property
     def last_batch_no_of_rows(self) -> int:
-        return self.base_generator.generator.ValidationRemainderRows()
+        return self.base_generator.generator.TrainRemainderRows()
 
     def __iter__(self):
         self._callable = self.__call__()
@@ -416,22 +435,21 @@ class ValidationRBatchGenerator:
         return batch
 
     def __call__(self) -> Any:
-        """Loop through the validation batches
+        """Start the loading of batches and Yield the results
 
         Yields:
             Union[np.NDArray, torch.Tensor]: A batch of data
         """
-        if self.base_generator.is_active:
-            self.base_generator.DeActivate()
-
+        
         while True:
             batch = self.base_generator.GetValidationBatch()
-
-            if not batch:
+            if batch is None:
+                self.base_generator.DeActivateEpoch()                    
                 break
-
             yield self.conversion_function(batch)
-
+        
+        return None    
+    
 
 def CreatePyTorchGenerators(
     rdataframe: RNode,
@@ -513,12 +531,8 @@ def CreatePyTorchGenerators(
     if validation_split == 0.0:
         return train_generator
 
-    # validation_generator = ValidationRBatchGenerator(
-    #     base_generator, base_generator.ConvertBatchToPyTorch
-    # )
+    validation_generator = ValidationRBatchGenerator(
+        base_generator, base_generator.ConvertBatchToPyTorch
+    )
     
-    validation_generator = 0
-    
-    
-
     return train_generator, validation_generator

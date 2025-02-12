@@ -637,6 +637,10 @@ class RChunkLoader {
   std::size_t GetNumberOfFullTrainingChunks() {
     return fNumFullTrainChunks;
   }
+
+  std::size_t GetNumberOfFullValidationChunks() {
+    return fNumFullValidationChunks;
+  }
   
   
   void PrintTrainValidationVector() {
