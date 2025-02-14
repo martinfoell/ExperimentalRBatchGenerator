@@ -19,12 +19,13 @@ batch_size = 1000
 validation_split = 0.25
 shuffle = True
 
-epochs = 3
+epochs = 1
 
 neuron = 70
 
 AUC = []
 D_SIG = []
+R_sig_val = []
 n_trainings = int(sys.argv[3])
 
 for k in range(n_trainings):
@@ -136,7 +137,7 @@ for k in range(n_trainings):
     data = [chunk_size, range_size, auc, D_sig]
     AUC.append(auc)
     D_SIG.append(D_sig.item())
-
+    R_sig_val.append(r_sig_val.item())
 if  n_trainings > 1:
     np_data = np.array(data)
     auc_mean = st.mean(AUC)
@@ -146,8 +147,11 @@ if  n_trainings > 1:
 
     print(AUC)
     print(D_SIG)
+    
     print(auc_mean, auc_stdev)
     print(D_sig_mean, D_sig_stdev)
+
+    
     df = ROOT.RDF.FromNumpy({"chunk_size": np.array([chunk_size]),
                              "range_size": np.array([range_size]),
                              "auc_mean": np.array([auc_mean]),
@@ -157,3 +161,31 @@ if  n_trainings > 1:
 
     df.Snapshot("tree", f"../results/individual/{n_trainings}_{chunk_size}_{range_size}.root")
 print(rdf.GetColumnNames())
+
+print(R_sig_val)
+R_sig_val_round = []
+for i in R_sig_val:
+    rounded = round(i, 3)
+    R_sig_val_round.append(rounded)
+Count = []
+prob = list(set(R_sig_val_round))
+prob.sort()
+print(prob)
+for i in prob:
+    count = R_sig_val_round.count(i)
+    Count.append(count)
+
+print(prob)
+print(Count)
+prob_distr = []
+
+Tot_count = sum(Count)
+for i in range(len(Count)):
+    prob_i = Count[i]/Tot_count
+    prob_distr.append(prob_i)
+
+print(prob)
+print(prob_distr)
+    
+    
+    
