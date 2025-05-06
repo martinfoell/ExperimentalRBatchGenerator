@@ -190,7 +190,7 @@ class RChunkLoader {
     fNumReminderTrainChunkFullRanges = fReminderTrainChunkSize / fRangeSize;
     fNumReminderValidationChunkFullRanges = fReminderValidationChunkSize / fRangeSize;;
 
-    // number of reminder ranges in the reminder chunk for training and validation
+    // number of reminder ranges in the reminder chunk for training and validation (0 or 1)
     fNumReminderTrainChunkReminderRanges = fReminderTrainChunkReminderRangeSize == 0 ? 0 : 1;
     fNumReminderValidationChunkReminderRanges = fReminderValidationChunkReminderRangeSize == 0 ? 0 : 1;
 
@@ -202,6 +202,7 @@ class RChunkLoader {
     fTotNumFullChunks = fNumFullTrainChunks + fNumFullValidationChunks;
     fTotNumReminderChunks = fNumReminderTrainChunks + fNumReminderValidationChunks;
     
+    // total number of reminder  and reminder chunks in the dataset (train + val)
     fTotNumReminderChunkFullRanges = fNumReminderTrainChunkFullRanges + fNumReminderValidationChunkFullRanges;
       
     fTotNumTrainFullRanges = fNumFullTrainChunks * fNumFullChunkFullRanges + fNumReminderTrainChunkFullRanges;
@@ -309,7 +310,8 @@ class RChunkLoader {
   };    
 
 
-  void CreateTrainRangeVector() {
+  void CreateTrainRangeVector()
+  {
 
     std::random_device rd;
     std::mt19937 g(rd());
