@@ -327,27 +327,81 @@ public:
       std::random_device rd;
       std::mt19937 g(rd());
 
-      for (int i = 0; i < fPartialSumRangeSizes.size() - 1; i++) {
-         if (fPartialSumRangeSizes[i + 1] - fPartialSumRangeSizes[i] == fRangeSize) {
-            fFullRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i + 1]));
-         }
+      for (size_t i = 0; i < fPartialSumRangeSizes.size() - 1; ++i) {
+         int start = fPartialSumRangeSizes[i];
+         int end = fPartialSumRangeSizes[i + 1];
+         int rangeSize = end - start;
 
-         else if (fPartialSumRangeSizes[i + 1] - fPartialSumRangeSizes[i] == fFullChunkReminderRangeSize) {
-            fReminderRanges.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i + 1]));
-         }
-
-         else if (fPartialSumRangeSizes[i + 1] - fPartialSumRangeSizes[i] == fReminderTrainChunkReminderRangeSize) {
-            fTrainRangesReminder.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i + 1]));
-         }
-
-         else if (fPartialSumRangeSizes[i + 1] - fPartialSumRangeSizes[i] ==
-                  fReminderValidationChunkReminderRangeSize) {
-            fValidationRangesReminder.push_back(std::make_pair(fPartialSumRangeSizes[i], fPartialSumRangeSizes[i + 1]));
+         if (rangeSize == fRangeSize) {
+            fFullRanges.emplace_back(start, end); // Full-sized range
+         } else if (rangeSize == fFullChunkReminderRangeSize) {
+            fReminderRanges.emplace_back(start, end); // Reminder chunk
+         } else if (rangeSize == fReminderTrainChunkReminderRangeSize) {
+            fTrainRangesReminder.emplace_back(start, end); // Train reminder chunk
+         } else if (rangeSize == fReminderValidationChunkReminderRangeSize) {
+            fValidationRangesReminder.emplace_back(start, end); // Validation reminder chunk
          }
       }
 
       std::shuffle(fFullRanges.begin(), fFullRanges.end(), g);
       std::shuffle(fReminderRanges.begin(), fReminderRanges.end(), g);
+
+      // bool allEqual = fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize &&
+      //                 fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize &&
+      //                 fFullChunkReminderRangeSize != 0;
+
+      // bool fullEqualsTrain =
+      //    fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize && fFullChunkReminderRangeSize != 0;
+
+      // bool fullEqualsValidation =
+      //    fFullChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize && fFullChunkReminderRangeSize !=
+      //    0;
+
+      // bool trainEqualsValidation = fReminderTrainChunkReminderRangeSize == fReminderValidationChunkReminderRangeSize
+      // &&
+      //                              fReminderTrainChunkReminderRangeSize != 0;
+
+      // // i) All three reminder sizes are equal
+      // if (allEqual) {
+      //    if (!fReminderRanges.empty()) {
+      //       fTrainRangesReminder.push_back(fReminderRanges.back());
+      //       fReminderRanges.pop_back();
+      //    }
+
+      //    if (!fReminderRanges.empty()) {
+      //       fValidationRangesReminder.push_back(fReminderRanges.back());
+      //       fReminderRanges.pop_back();
+      //    }
+
+      //    std::cout << "i) Reminder range, reminder train range, and reminder validation range are equal\n";
+      // }
+      // // ii) Reminder and train sizes are equal
+      // else if (fullEqualsTrain) {
+      //    if (!fReminderRanges.empty()) {
+      //       fTrainRangesReminder.push_back(fReminderRanges.back());
+      //       fReminderRanges.pop_back();
+      //    }
+
+      //    std::cout << "ii) Reminder range and reminder train range are equal\n";
+      // }
+      // // iii) Reminder and validation sizes are equal
+      // else if (fullEqualsValidation) {
+      //    if (!fReminderRanges.empty()) {
+      //       fValidationRangesReminder.push_back(fReminderRanges.back());
+      //       fReminderRanges.pop_back();
+      //    }
+
+      //    std::cout << "iii) Reminder range and reminder validation range are equal\n";
+      // }
+      // // iv) Train and validation sizes are equal
+      // else if (trainEqualsValidation) {
+      //    if (!fTrainRangesReminder.empty()) {
+      //       fValidationRangesReminder.push_back(fTrainRangesReminder.back());
+      //       fTrainRangesReminder.pop_back();
+      //    }
+
+      //    std::cout << "iv) Reminder train range and reminder validation range are equal\n";
+      // }
 
       // corner cases if some of the reminder sizes are equal
       if (fFullChunkReminderRangeSize == fReminderTrainChunkReminderRangeSize and
