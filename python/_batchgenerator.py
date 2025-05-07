@@ -1,6 +1,6 @@
 from __future__ import annotations
 import ROOT
-ROOT.gInterpreter.Declare('#include "../inc/RBatchGenerator_python.hxx"')
+ROOT.gInterpreter.Declare('#include "../inc/RBatchGenerator.hxx"')
 from typing import Any, Callable, Tuple, TYPE_CHECKING
 import atexit
 

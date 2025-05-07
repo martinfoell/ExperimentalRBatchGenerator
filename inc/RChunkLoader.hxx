@@ -1,17 +1,32 @@
-#include "TMVA/RTensor.hxx"
-#include "ROOT/RDF/RDatasetSpec.hxx"
-#include "TROOT.h"
+// Author: Dante Niewenhuis, VU Amsterdam 07/2023
+// Author: Kristupas Pranckietis, Vilnius University 05/2024
+// Author: Nopphakorn Subsa-Ard, King Mongkut's University of Technology Thonburi (KMUTT) (TH) 08/2024
+// Author: Vincenzo Eduardo Padulano, CERN 10/2024
+// Author: Martin Føll, University of Oslo (UiO) & CERN, 05/2025
 
-#include <cmath>
-#include <memory>
-#include <mutex>
-#include <random>
-#include <thread>
-#include <variant>
+/*************************************************************************
+ * Copyright (C) 1995-2024, Rene Brun and Fons Rademakers.               *
+ * All rights reserved.                                                  *
+ *                                                                       *
+ * For the licensing terms see $ROOTSYS/LICENSE.                         *
+ * For the list of contributors see $ROOTSYS/README/CREDITS.             *
+ *************************************************************************/
+
+// #ifndef TMVA_RCHUNKLOADER
+// #define TMVA_RCHUNKLOADER
+
 #include <vector>
-#include <iostream>
-#include <list>
-#include <set>
+
+#include "TMVA/RTensor.hxx"
+#include "ROOT/RDataFrame.hxx"
+#include "ROOT/RDF/Utils.hxx"
+#include "ROOT/RVec.hxx"
+
+#include "ROOT/RLogger.hxx"
+
+// namespace TMVA {
+// namespace Experimental {
+// namespace Internal {
 
 template <typename... ColTypes>
 class RRangeChunkLoaderFunctor {
@@ -44,7 +59,7 @@ class RRangeChunkLoaderFunctor {
 
 template <typename... Args>
 class RChunkLoader {
- private:
+private:
   std::size_t fNumEntries;
   std::size_t fChunkSize;
   std::size_t fRangeSize;
@@ -403,8 +418,8 @@ class RChunkLoader {
     }
 
     for (int i = 0; i < fNumTrainEntries; i++) {
-    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
-              TrainTensor.GetData() + i * fNumCols);
+      std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                TrainTensor.GetData() + i * fNumCols);
       
     }
   }
@@ -432,8 +447,8 @@ class RChunkLoader {
     }
 
     for (int i = 0; i < fNumValidationEntries; i++) {
-    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
-              ValidationTensor.GetData() + i * fNumCols);
+      std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                ValidationTensor.GetData() + i * fNumCols);
       
     }
     
@@ -612,8 +627,8 @@ class RChunkLoader {
     std::set<int> set1(allEntries1.begin(), allEntries1.end());
     std::set<int> set2(allEntries2.begin(), allEntries2.end());        
     std::set_intersection(set1.begin(), set1.end(), set2.begin(),
-                     set2.end(),
-                     inserter(result, result.begin()));    
+                          set2.end(),
+                          inserter(result, result.begin()));    
     // std::list<int> result = intersection(allEntries1, allEntries2);
 
     if (result.size() == 0) {
@@ -831,3 +846,7 @@ class RChunkLoader {
 
   
 };
+// } // namespace Internal
+// } // namespace Experimental
+// } // namespace TMVA
+// #endif // TMVA_RCHUNKLOADER
