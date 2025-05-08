@@ -110,8 +110,12 @@ public:
       fChunkLoader->PrintChunkDistributions();
       fChunkLoader->PrintRangeDistributions();
 
+      fChunkLoader->CalculateBlockBoundaries();
       fChunkLoader->CreateRangeVector();
       fChunkLoader->SortRangeVector();
+
+      // fChunkLoader->CalculateBlockBoundaries();
+      
 
       fReminderBatchSize = fChunkSize % fBatchSize;
       std::cout << "Reminder batch size: " << fReminderBatchSize << std::endl;

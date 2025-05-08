@@ -57,8 +57,39 @@ struct RChunkBlockStructure {
    std::size_t FullBlocksPerLeftoverChunk;
    std::size_t LeftoverBlocksPerLeftoverChunk;
    std::size_t BlockPerLeftoverChunk;   
+
+   // total number of full and leftover blocks in the full chunks
+   std::size_t FullBlocksInFullChunks;
+   std::size_t LeftoverBlocksInFullChunks;
    
-   RChunkBlockStructure(const int numEntries, const std::size_t chunkSize, const std::size_t blockSize)
+   // total number of full and leftover blocks in the leftover chunks   
+   std::size_t FullBlocksInLeftoverChunks;
+   std::size_t LeftoverBlocksInLeftoverChunks;
+
+   // vector of the different block sizes
+   std::vector<std::size_t> SizeOfBlocks;
+   
+   // vector with the number of the different block
+   std::vector<std::size_t> NumberOfDifferentBlocks;
+
+
+   
+   // total number of blocks
+   std::size_t NumberOfBlocks;
+
+   std::vector<std::pair<Long_t, Long_t>> BlockIntervals = {};
+
+   std::vector<std::pair<Long_t, Long_t>> FullBlockIntervalsInFullChunks = {};
+   std::vector<std::pair<Long_t, Long_t>> LeftoverBlockIntervalsInFullChunks = {};
+
+   std::vector<std::pair<Long_t, Long_t>> FullBlockIntervalsInLeftoverChunks = {};
+   std::vector<std::pair<Long_t, Long_t>> LeftoverBlockIntervalsInLeftoverChunks = {};
+   
+   // std::vector<std::vector<std::pair<Long_t, Long_t>>> TypesOfBlockIntervals = {};
+   // std::vector<std::vector<std::pair<Long_t, Long_t>>*> TypesOfBlockIntervals;
+   std::vector<std::size_t> PartialSumNumberOfDifferentBlocks;      
+   
+   RChunkBlockStructure(const std::size_t numEntries, const std::size_t chunkSize, const std::size_t blockSize)
       : fNumEntries(numEntries),
         fChunkSize(chunkSize),
         fBlockSize(blockSize)
@@ -87,6 +118,45 @@ struct RChunkBlockStructure {
       FullBlocksPerLeftoverChunk = SizeOfLeftoverChunk / fBlockSize;
       LeftoverBlocksPerLeftoverChunk = SizeOfLeftoverBlockInLeftoverChunk == 0 ? 0 : 1;
       BlockPerLeftoverChunk = FullBlocksPerLeftoverChunk + LeftoverBlocksPerLeftoverChunk;
+
+      // total number of full and leftover blocks in the full chunks
+      FullBlocksInFullChunks = FullBlocksPerFullChunk * FullChunks;
+      LeftoverBlocksInFullChunks = LeftoverBlocksPerFullChunk * FullChunks;
+   
+      // total number of full and leftover blocks in the leftover chunks   
+      FullBlocksInLeftoverChunks = FullBlocksPerLeftoverChunk * LeftoverChunks;
+      LeftoverBlocksInLeftoverChunks = LeftoverBlocksPerLeftoverChunk * LeftoverChunks;
+
+      // vector of the different block sizes      
+      SizeOfBlocks = {SizeOfFullBlockInFullChunk, SizeOfLeftoverBlockInFullChunk, SizeOfFullBlockInLeftoverChunk, SizeOfLeftoverBlockInLeftoverChunk};
+
+      
+      // vector with the number of the different block
+      NumberOfDifferentBlocks = {FullBlocksInFullChunks, LeftoverBlocksInFullChunks, FullBlocksInLeftoverChunks, LeftoverBlocksInLeftoverChunks};
+
+      PartialSumNumberOfDifferentBlocks.resize(NumberOfDifferentBlocks.size());
+      std::partial_sum(NumberOfDifferentBlocks.begin(), NumberOfDifferentBlocks.end(), PartialSumNumberOfDifferentBlocks.begin());
+      PartialSumNumberOfDifferentBlocks.insert(PartialSumNumberOfDifferentBlocks.begin(), 0);
+      
+      // total number of blocks
+      NumberOfBlocks = std::accumulate(NumberOfDifferentBlocks.begin(), NumberOfDifferentBlocks.end(), 0);
+
+};
+
+   void DistributeBlockIntervals() {
+
+      std::vector<std::vector<std::pair<Long_t, Long_t>>*> TypesOfBlockIntervals = {
+         &FullBlockIntervalsInFullChunks,
+         &LeftoverBlockIntervalsInFullChunks,
+         &FullBlockIntervalsInLeftoverChunks,
+         &LeftoverBlockIntervalsInLeftoverChunks         
+      };
+      for (size_t i = 0; i < TypesOfBlockIntervals.size(); ++i) {
+         size_t start = PartialSumNumberOfDifferentBlocks[i];
+         size_t end   = PartialSumNumberOfDifferentBlocks[i + 1];
+
+         TypesOfBlockIntervals[i]->insert(TypesOfBlockIntervals[i]->begin(), BlockIntervals.begin() + start, BlockIntervals.begin() + end);
+      }      
    }
 };
 
@@ -273,6 +343,8 @@ private:
 
    bool fNotFiltered;
    bool fShuffle;
+   // RChunkBlockStructure Training;
+   // RChunkBlockStructure Training;
 
 public:
    RChunkLoader(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
@@ -295,6 +367,12 @@ public:
       fNumValidationEntries = static_cast<std::size_t>(fValidationSplit * fNumEntries);
       fNumTrainEntries = fNumEntries - fNumValidationEntries;
 
+      RChunkBlockStructure Training(fNumTrainEntries, fChunkSize, fRangeSize);
+      // RChunkBlockStructure Training = RChunkBlockStructure(fNumTrainEntries, fChunkSize, fRangeSize);
+
+      std::cout << "Test:" << Training.SizeOfLeftoverChunk << std::endl;
+      std::cout << "Test:" << Training.SizeOfLeftoverBlockInFullChunk << std::endl;
+      std::cout << "Test:" << Training.SizeOfLeftoverBlockInLeftoverChunk << std::endl;      
       // number of full chunks for training and validetion
       fNumFullTrainChunks = fNumTrainEntries / fChunkSize;
       fNumFullValidationChunks = fNumValidationEntries / fChunkSize;
@@ -366,6 +444,139 @@ public:
                               fNumReminderValidationChunkReminderRanges * fReminderValidationChunkReminderRangeSize;
    }
 
+   void PrintVector(std::vector<Long_t> vec) {
+      std::cout << "{" ;
+      for (int i = 0; i < vec.size(); i++) {
+         if (i == vec.size() - 1 ) {
+            std::cout << vec[i];            
+         }
+         else {
+            std::cout << vec[i] << ",";            
+         }
+      }
+      std::cout << "}" << std::endl;
+   }
+
+
+   void PrintVectorSize(std::vector<std::size_t> vec) {
+      std::cout << "{" ;
+      for (int i = 0; i < vec.size(); i++) {
+         if (i == vec.size() - 1 ) {
+            std::cout << vec[i];            
+         }
+         else {
+            std::cout << vec[i] << ",";            
+         }
+      }
+      std::cout << "}" << std::endl;
+   }
+   
+   void PrintPair(std::vector<std::pair<Long_t, Long_t>> vec) {
+      std::cout << "{" ;
+      for (int i = 0; i < vec.size(); i++) {
+         if (i == vec.size() - 1 ) {
+            std::cout << "(" << vec[i].first << ", " << vec[i].second << ")" ;            
+         }
+         else {
+            std::cout << "(" << vec[i].first << ", " << vec[i].second << ")" << ","; 
+            // std::cout << vec[i] << ",";            
+         }
+      }
+      std::cout << "}" << std::endl;
+   }
+   
+   void CalculateBlockBoundaries()
+   {
+      // std::random_device rd;
+      // std::mt19937 g(rd());
+            
+      std::mt19937 g(42);
+
+      std::vector<Long_t> BlockSizes = {};
+      // std::vector<Long_t> BlockBoundaries = {};
+
+      RChunkBlockStructure Training(fNumTrainEntries, fChunkSize, fRangeSize);
+      RChunkBlockStructure Validation(fNumValidationEntries, fChunkSize, fRangeSize);      
+
+      // fill the training and validation block sizes
+      for (size_t i = 0; i < Training.NumberOfDifferentBlocks.size(); i++) {
+         BlockSizes.insert(BlockSizes.end(), Training.NumberOfDifferentBlocks[i], Training.SizeOfBlocks[i]);         
+      }
+      
+      PrintVector(BlockSizes);
+      for (size_t i = 0; i < Validation.NumberOfDifferentBlocks.size(); i++) {
+         BlockSizes.insert(BlockSizes.end(), Validation.NumberOfDifferentBlocks[i], Validation.SizeOfBlocks[i]);         
+      }
+
+      std::vector<Long_t> indices(BlockSizes.size());
+
+      for (int i = 0; i < indices.size(); ++i) {
+         indices[i] = i;
+      }
+   
+      std::shuffle(indices.begin(), indices.end(), g);
+
+      std::vector<Long_t> PermutedBlockSizes(BlockSizes.size());
+      for (int i = 0; i < BlockSizes.size(); ++i) {
+         PermutedBlockSizes[i] = BlockSizes[indices[i]];
+      }
+
+      std::vector<Long_t> BlockBoundaries(BlockSizes.size());      
+
+      std::partial_sum(PermutedBlockSizes.begin(), PermutedBlockSizes.end(), BlockBoundaries.begin());      
+      BlockBoundaries.insert(BlockBoundaries.begin(), 0);            
+
+      std::vector<std::pair<Long_t, Long_t>> BlockIntervals;
+      for (size_t i = 0; i < BlockBoundaries.size() - 1; ++i) {
+        BlockIntervals.emplace_back(BlockBoundaries[i], BlockBoundaries[i + 1]);
+      }
+
+      // std::vector<Long_t> BlockBoundaries = {};
+      std::vector<std::pair<Long_t, Long_t>> UnpermutedBlockIntervals(BlockIntervals.size());
+      // std::vector<int> unshuffled(data.size());
+      for (int i = 0; i < BlockIntervals.size(); ++i) {
+         UnpermutedBlockIntervals[indices[i]] = BlockIntervals[i];
+      }
+
+      Training.BlockIntervals.insert(Training.BlockIntervals.begin(), UnpermutedBlockIntervals.begin(), UnpermutedBlockIntervals.begin() + Training.NumberOfBlocks);
+      Validation.BlockIntervals.insert(Validation.BlockIntervals.begin(), UnpermutedBlockIntervals.begin() + Training.NumberOfBlocks + 1, UnpermutedBlockIntervals.end());
+
+      Training.DistributeBlockIntervals();
+      Validation.DistributeBlockIntervals();      
+      
+      // PrintVector(indices) ;     
+      // PrintVector(BlockSizes);
+      // PrintVector(PermutedBlockSizes);
+      // PrintVector(BlockBoundaries);
+      // PrintPair(BlockIntervals);
+
+      PrintPair(UnpermutedBlockIntervals);
+      // PrintPair(TrainingBlockIntervals);
+      std::cout << "Training: ";      
+      PrintPair(Training.BlockIntervals);
+      std::cout << "Validation: ";      
+      PrintPair(Validation.BlockIntervals) ;     
+      // PrintPair(ValidationBlock);
+      
+      std::cout << "Training" << std::endl;
+      PrintVectorSize(Training.NumberOfDifferentBlocks);
+      PrintPair(Training.FullBlockIntervalsInFullChunks);
+      PrintPair(Training.LeftoverBlockIntervalsInFullChunks);      
+      PrintPair(Training.FullBlockIntervalsInLeftoverChunks);
+      PrintPair(Training.LeftoverBlockIntervalsInLeftoverChunks);      
+      
+      std::cout << "Validation" << std::endl;
+      PrintVectorSize(Validation.NumberOfDifferentBlocks);
+      PrintPair(Validation.FullBlockIntervalsInFullChunks);
+      PrintPair(Validation.LeftoverBlockIntervalsInFullChunks);      
+      PrintPair(Validation.FullBlockIntervalsInLeftoverChunks);
+      PrintPair(Validation.LeftoverBlockIntervalsInLeftoverChunks);      
+      
+      std::cout << Training.NumberOfBlocks << " " << Validation.NumberOfBlocks << std::endl;
+   
+   };
+   
+   
    void CreateRangeVector()
    {
       std::random_device rd;
