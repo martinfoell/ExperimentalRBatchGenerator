@@ -28,6 +28,71 @@
 // namespace Experimental {
 // namespace Internal {
 
+struct RChunkBlockStructure {
+   std::size_t fNumEntries;
+   std::size_t fChunkSize;
+   std::size_t fBlockSize;
+
+   // size of full and leftover chunks   
+   std::size_t SizeOfFullChunk;   
+   std::size_t SizeOfLeftoverChunk;
+
+   // size of full and leftover blocks in a full and leftover chunk
+   std::size_t SizeOfFullBlockInFullChunk;
+   std::size_t SizeOfLeftoverBlockInFullChunk;   
+   std::size_t SizeOfFullBlockInLeftoverChunk;
+   std::size_t SizeOfLeftoverBlockInLeftoverChunk;
+   
+   // number of full, leftover and total chunks   
+   std::size_t FullChunks;
+   std::size_t LeftoverChunks;
+   std::size_t Chunks;
+   
+   // number of full, leftover and total blocks in a full chunk     
+   std::size_t FullBlocksPerFullChunk;
+   std::size_t LeftoverBlocksPerFullChunk;
+   std::size_t BlockPerFullChunk;   
+   
+   // number of full, leftover and total blocks in the leftover chunk        
+   std::size_t FullBlocksPerLeftoverChunk;
+   std::size_t LeftoverBlocksPerLeftoverChunk;
+   std::size_t BlockPerLeftoverChunk;   
+   
+   RChunkBlockStructure(const int numEntries, const std::size_t chunkSize, const std::size_t blockSize)
+      : fNumEntries(numEntries),
+        fChunkSize(chunkSize),
+        fBlockSize(blockSize)
+   {
+      // size of full and leftover chunks   
+      SizeOfFullChunk = fChunkSize;      
+      SizeOfLeftoverChunk = fNumEntries % SizeOfFullChunk;
+
+      // size of full and leftover blocks in a full and leftover chunk   
+      SizeOfFullBlockInFullChunk = fBlockSize;
+      SizeOfLeftoverBlockInFullChunk = SizeOfFullChunk % fBlockSize;   
+      SizeOfFullBlockInLeftoverChunk = fBlockSize;      
+      SizeOfLeftoverBlockInLeftoverChunk = SizeOfLeftoverChunk % fBlockSize;      
+   
+      // number of full, leftover and total chunks      
+      FullChunks = fNumEntries / SizeOfFullChunk;
+      LeftoverChunks = SizeOfLeftoverChunk == 0 ? 0 : 1;
+      Chunks = FullChunks + LeftoverChunks;
+   
+      // number of full, leftover and total blocks in a full chunk     
+      FullBlocksPerFullChunk = SizeOfFullChunk / fBlockSize;
+      LeftoverBlocksPerFullChunk = SizeOfLeftoverBlockInFullChunk == 0 ? 0 : 1;
+      BlockPerFullChunk = FullBlocksPerFullChunk + LeftoverBlocksPerFullChunk;      
+
+      // number of full, leftover and total blocks in the leftover chunk              
+      FullBlocksPerLeftoverChunk = SizeOfLeftoverChunk / fBlockSize;
+      LeftoverBlocksPerLeftoverChunk = SizeOfLeftoverBlockInLeftoverChunk == 0 ? 0 : 1;
+      BlockPerLeftoverChunk = FullBlocksPerLeftoverChunk + LeftoverBlocksPerLeftoverChunk;
+   }
+};
+
+
+
+
 template <typename... ColTypes>
 class RRangeChunkLoaderFunctor {
    std::size_t fOffset{};
