@@ -24,144 +24,10 @@
 
 #include "ROOT/RLogger.hxx"
 
+#include "RChunkConstructor.hxx"
 // namespace TMVA {
 // namespace Experimental {
 // namespace Internal {
-
-struct RChunkBlockStructure {
-   std::size_t fNumEntries;
-   std::size_t fChunkSize;
-   std::size_t fBlockSize;
-
-   // size of full and leftover chunks   
-   std::size_t SizeOfFullChunk;   
-   std::size_t SizeOfLeftoverChunk;
-
-   // size of full and leftover blocks in a full and leftover chunk
-   std::size_t SizeOfFullBlockInFullChunk;
-   std::size_t SizeOfLeftoverBlockInFullChunk;   
-   std::size_t SizeOfFullBlockInLeftoverChunk;
-   std::size_t SizeOfLeftoverBlockInLeftoverChunk;
-   
-   // number of full, leftover and total chunks   
-   std::size_t FullChunks;
-   std::size_t LeftoverChunks;
-   std::size_t Chunks;
-   
-   // number of full, leftover and total blocks in a full chunk     
-   std::size_t FullBlocksPerFullChunk;
-   std::size_t LeftoverBlocksPerFullChunk;
-   std::size_t BlockPerFullChunk;   
-   
-   // number of full, leftover and total blocks in the leftover chunk        
-   std::size_t FullBlocksPerLeftoverChunk;
-   std::size_t LeftoverBlocksPerLeftoverChunk;
-   std::size_t BlockPerLeftoverChunk;   
-
-   // total number of full and leftover blocks in the full chunks
-   std::size_t FullBlocksInFullChunks;
-   std::size_t LeftoverBlocksInFullChunks;
-   
-   // total number of full and leftover blocks in the leftover chunks   
-   std::size_t FullBlocksInLeftoverChunks;
-   std::size_t LeftoverBlocksInLeftoverChunks;
-
-   // vector of the different block sizes
-   std::vector<std::size_t> SizeOfBlocks;
-   
-   // vector with the number of the different block
-   std::vector<std::size_t> NumberOfDifferentBlocks;
-
-
-   
-   // total number of blocks
-   std::size_t NumberOfBlocks;
-
-   std::vector<std::pair<Long_t, Long_t>> BlockIntervals = {};
-
-   std::vector<std::pair<Long_t, Long_t>> FullBlockIntervalsInFullChunks = {};
-   std::vector<std::pair<Long_t, Long_t>> LeftoverBlockIntervalsInFullChunks = {};
-
-   std::vector<std::pair<Long_t, Long_t>> FullBlockIntervalsInLeftoverChunks = {};
-   std::vector<std::pair<Long_t, Long_t>> LeftoverBlockIntervalsInLeftoverChunks = {};
-   
-   // std::vector<std::vector<std::pair<Long_t, Long_t>>> TypesOfBlockIntervals = {};
-   // std::vector<std::vector<std::pair<Long_t, Long_t>>*> TypesOfBlockIntervals;
-   std::vector<std::size_t> PartialSumNumberOfDifferentBlocks;      
-   
-   RChunkBlockStructure(const std::size_t numEntries, const std::size_t chunkSize, const std::size_t blockSize)
-      : fNumEntries(numEntries),
-        fChunkSize(chunkSize),
-        fBlockSize(blockSize)
-   {
-      // size of full and leftover chunks   
-      SizeOfFullChunk = fChunkSize;      
-      SizeOfLeftoverChunk = fNumEntries % SizeOfFullChunk;
-
-      // size of full and leftover blocks in a full and leftover chunk   
-      SizeOfFullBlockInFullChunk = fBlockSize;
-      SizeOfLeftoverBlockInFullChunk = SizeOfFullChunk % fBlockSize;   
-      SizeOfFullBlockInLeftoverChunk = fBlockSize;      
-      SizeOfLeftoverBlockInLeftoverChunk = SizeOfLeftoverChunk % fBlockSize;      
-   
-      // number of full, leftover and total chunks      
-      FullChunks = fNumEntries / SizeOfFullChunk;
-      LeftoverChunks = SizeOfLeftoverChunk == 0 ? 0 : 1;
-      Chunks = FullChunks + LeftoverChunks;
-   
-      // number of full, leftover and total blocks in a full chunk     
-      FullBlocksPerFullChunk = SizeOfFullChunk / fBlockSize;
-      LeftoverBlocksPerFullChunk = SizeOfLeftoverBlockInFullChunk == 0 ? 0 : 1;
-      BlockPerFullChunk = FullBlocksPerFullChunk + LeftoverBlocksPerFullChunk;      
-
-      // number of full, leftover and total blocks in the leftover chunk              
-      FullBlocksPerLeftoverChunk = SizeOfLeftoverChunk / fBlockSize;
-      LeftoverBlocksPerLeftoverChunk = SizeOfLeftoverBlockInLeftoverChunk == 0 ? 0 : 1;
-      BlockPerLeftoverChunk = FullBlocksPerLeftoverChunk + LeftoverBlocksPerLeftoverChunk;
-
-      // total number of full and leftover blocks in the full chunks
-      FullBlocksInFullChunks = FullBlocksPerFullChunk * FullChunks;
-      LeftoverBlocksInFullChunks = LeftoverBlocksPerFullChunk * FullChunks;
-   
-      // total number of full and leftover blocks in the leftover chunks   
-      FullBlocksInLeftoverChunks = FullBlocksPerLeftoverChunk * LeftoverChunks;
-      LeftoverBlocksInLeftoverChunks = LeftoverBlocksPerLeftoverChunk * LeftoverChunks;
-
-      // vector of the different block sizes      
-      SizeOfBlocks = {SizeOfFullBlockInFullChunk, SizeOfLeftoverBlockInFullChunk, SizeOfFullBlockInLeftoverChunk, SizeOfLeftoverBlockInLeftoverChunk};
-
-      
-      // vector with the number of the different block
-      NumberOfDifferentBlocks = {FullBlocksInFullChunks, LeftoverBlocksInFullChunks, FullBlocksInLeftoverChunks, LeftoverBlocksInLeftoverChunks};
-
-      PartialSumNumberOfDifferentBlocks.resize(NumberOfDifferentBlocks.size());
-      std::partial_sum(NumberOfDifferentBlocks.begin(), NumberOfDifferentBlocks.end(), PartialSumNumberOfDifferentBlocks.begin());
-      PartialSumNumberOfDifferentBlocks.insert(PartialSumNumberOfDifferentBlocks.begin(), 0);
-      
-      // total number of blocks
-      NumberOfBlocks = std::accumulate(NumberOfDifferentBlocks.begin(), NumberOfDifferentBlocks.end(), 0);
-
-};
-
-   void DistributeBlockIntervals() {
-
-      std::vector<std::vector<std::pair<Long_t, Long_t>>*> TypesOfBlockIntervals = {
-         &FullBlockIntervalsInFullChunks,
-         &LeftoverBlockIntervalsInFullChunks,
-         &FullBlockIntervalsInLeftoverChunks,
-         &LeftoverBlockIntervalsInLeftoverChunks         
-      };
-      for (size_t i = 0; i < TypesOfBlockIntervals.size(); ++i) {
-         size_t start = PartialSumNumberOfDifferentBlocks[i];
-         size_t end   = PartialSumNumberOfDifferentBlocks[i + 1];
-
-         TypesOfBlockIntervals[i]->insert(TypesOfBlockIntervals[i]->begin(), BlockIntervals.begin() + start, BlockIntervals.begin() + end);
-      }      
-   }
-};
-
-
-
 
 template <typename... ColTypes>
 class RRangeChunkLoaderFunctor {
@@ -343,8 +209,9 @@ private:
 
    bool fNotFiltered;
    bool fShuffle;
-   // RChunkBlockStructure Training;
-   // RChunkBlockStructure Training;
+
+   std::unique_ptr<RChunkConstructor> fTraining;
+   std::unique_ptr<RChunkConstructor> fValidation;   
 
 public:
    RChunkLoader(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
@@ -356,6 +223,7 @@ public:
         fValidationSplit(validationSplit),
         fNotFiltered(f_rdf.GetFilterNames().empty()),
         fShuffle(shuffle)
+
    {
       if (fNotFiltered) {
          fNumEntries = f_rdf.Count().GetValue();
@@ -366,13 +234,10 @@ public:
       // number of training and validation entries after the split
       fNumValidationEntries = static_cast<std::size_t>(fValidationSplit * fNumEntries);
       fNumTrainEntries = fNumEntries - fNumValidationEntries;
-
-      RChunkBlockStructure Training(fNumTrainEntries, fChunkSize, fRangeSize);
-      // RChunkBlockStructure Training = RChunkBlockStructure(fNumTrainEntries, fChunkSize, fRangeSize);
-
-      std::cout << "Test:" << Training.SizeOfLeftoverChunk << std::endl;
-      std::cout << "Test:" << Training.SizeOfLeftoverBlockInFullChunk << std::endl;
-      std::cout << "Test:" << Training.SizeOfLeftoverBlockInLeftoverChunk << std::endl;      
+      
+      fTraining = std::make_unique<RChunkConstructor>(fNumTrainEntries, fChunkSize, fRangeSize);
+      fValidation = std::make_unique<RChunkConstructor>(fNumValidationEntries, fChunkSize, fRangeSize);
+      
       // number of full chunks for training and validetion
       fNumFullTrainChunks = fNumTrainEntries / fChunkSize;
       fNumFullValidationChunks = fNumValidationEntries / fChunkSize;
@@ -484,8 +349,14 @@ public:
       }
       std::cout << "}" << std::endl;
    }
+
+   void PrintChunk(std::vector<std::vector<std::pair<Long_t, Long_t>>> vec, int chunkNum) {
+      std::vector<std::pair<Long_t, Long_t>> chunk = vec[chunkNum];
+
+      PrintPair(chunk);
+   }
    
-   void CalculateBlockBoundaries()
+   void SplitDatasetIntoTrainingAndValidation()
    {
       // std::random_device rd;
       // std::mt19937 g(rd());
@@ -494,18 +365,15 @@ public:
 
       std::vector<Long_t> BlockSizes = {};
       // std::vector<Long_t> BlockBoundaries = {};
-
-      RChunkBlockStructure Training(fNumTrainEntries, fChunkSize, fRangeSize);
-      RChunkBlockStructure Validation(fNumValidationEntries, fChunkSize, fRangeSize);      
-
+      
       // fill the training and validation block sizes
-      for (size_t i = 0; i < Training.NumberOfDifferentBlocks.size(); i++) {
-         BlockSizes.insert(BlockSizes.end(), Training.NumberOfDifferentBlocks[i], Training.SizeOfBlocks[i]);         
+      for (size_t i = 0; i < fTraining->NumberOfDifferentBlocks.size(); i++) {
+         BlockSizes.insert(BlockSizes.end(), fTraining->NumberOfDifferentBlocks[i], fTraining->SizeOfBlocks[i]);         
       }
       
       PrintVector(BlockSizes);
-      for (size_t i = 0; i < Validation.NumberOfDifferentBlocks.size(); i++) {
-         BlockSizes.insert(BlockSizes.end(), Validation.NumberOfDifferentBlocks[i], Validation.SizeOfBlocks[i]);         
+      for (size_t i = 0; i < fValidation->NumberOfDifferentBlocks.size(); i++) {
+         BlockSizes.insert(BlockSizes.end(), fValidation->NumberOfDifferentBlocks[i], fValidation->SizeOfBlocks[i]);         
       }
 
       std::vector<Long_t> indices(BlockSizes.size());
@@ -538,45 +406,222 @@ public:
          UnpermutedBlockIntervals[indices[i]] = BlockIntervals[i];
       }
 
-      Training.BlockIntervals.insert(Training.BlockIntervals.begin(), UnpermutedBlockIntervals.begin(), UnpermutedBlockIntervals.begin() + Training.NumberOfBlocks);
-      Validation.BlockIntervals.insert(Validation.BlockIntervals.begin(), UnpermutedBlockIntervals.begin() + Training.NumberOfBlocks + 1, UnpermutedBlockIntervals.end());
+      fTraining->BlockIntervals.insert(fTraining->BlockIntervals.begin(), UnpermutedBlockIntervals.begin(), UnpermutedBlockIntervals.begin() + fTraining->NumberOfBlocks);
+      fValidation->BlockIntervals.insert(fValidation->BlockIntervals.begin(), UnpermutedBlockIntervals.begin() + fTraining->NumberOfBlocks, UnpermutedBlockIntervals.end());
 
-      Training.DistributeBlockIntervals();
-      Validation.DistributeBlockIntervals();      
-      
       // PrintVector(indices) ;     
       // PrintVector(BlockSizes);
       // PrintVector(PermutedBlockSizes);
       // PrintVector(BlockBoundaries);
       // PrintPair(BlockIntervals);
-
       PrintPair(UnpermutedBlockIntervals);
-      // PrintPair(TrainingBlockIntervals);
-      std::cout << "Training: ";      
-      PrintPair(Training.BlockIntervals);
-      std::cout << "Validation: ";      
-      PrintPair(Validation.BlockIntervals) ;     
-      // PrintPair(ValidationBlock);
+
+      fTraining->DistributeBlockIntervals();
+      fValidation->DistributeBlockIntervals();      
       
-      std::cout << "Training" << std::endl;
-      PrintVectorSize(Training.NumberOfDifferentBlocks);
-      PrintPair(Training.FullBlockIntervalsInFullChunks);
-      PrintPair(Training.LeftoverBlockIntervalsInFullChunks);      
-      PrintPair(Training.FullBlockIntervalsInLeftoverChunks);
-      PrintPair(Training.LeftoverBlockIntervalsInLeftoverChunks);      
-      
-      std::cout << "Validation" << std::endl;
-      PrintVectorSize(Validation.NumberOfDifferentBlocks);
-      PrintPair(Validation.FullBlockIntervalsInFullChunks);
-      PrintPair(Validation.LeftoverBlockIntervalsInFullChunks);      
-      PrintPair(Validation.FullBlockIntervalsInLeftoverChunks);
-      PrintPair(Validation.LeftoverBlockIntervalsInLeftoverChunks);      
-      
-      std::cout << Training.NumberOfBlocks << " " << Validation.NumberOfBlocks << std::endl;
+      std::cout << "========================= Before shiuffling =============================" << std::endl;      
+      // std::cout << "Validation" << std::endl;
+      // PrintVectorSize(fValidation->NumberOfDifferentBlocks);
+      // PrintPair(fValidation->FullBlockIntervalsInFullChunks);
+      // PrintPair(fValidation->LeftoverBlockIntervalsInFullChunks);      
+      // PrintPair(fValidation->FullBlockIntervalsInLeftoverChunks);
+      // PrintPair(fValidation->LeftoverBlockIntervalsInLeftoverChunks);      
    
+      std::cout << std::endl;
+      std::cout << "Training" << std::endl;
+      std::cout << "Number of differnt blocks : ";
+      PrintVectorSize(fTraining->NumberOfDifferentBlocks);
+      std::cout << "Full blocks in full chunks: ";
+      PrintPair(fTraining->FullBlockIntervalsInFullChunks);
+      std::cout << "Leftover blocks in full chunks: ";      
+      PrintPair(fTraining->LeftoverBlockIntervalsInFullChunks);      
+      std::cout << "Full blocks in leftover chunks: ";      
+      PrintPair(fTraining->FullBlockIntervalsInLeftoverChunks);
+      std::cout << "Leftover blocks in leftover chunks: ";      
+      PrintPair(fTraining->LeftoverBlockIntervalsInLeftoverChunks);      
+   
+      std::cout << std::endl;
+      std::cout << "Validation" << std::endl;
+      std::cout << "Number of differnt blocks : ";
+      PrintVectorSize(fValidation->NumberOfDifferentBlocks);
+      std::cout << "Full blocks in full chunks: ";
+      PrintPair(fValidation->FullBlockIntervalsInFullChunks);
+      std::cout << "Leftover blocks in full chunks: ";      
+      PrintPair(fValidation->LeftoverBlockIntervalsInFullChunks);      
+      std::cout << "Full blocks in leftover chunks: ";      
+      PrintPair(fValidation->FullBlockIntervalsInLeftoverChunks);
+      std::cout << "Leftover blocks in leftover chunks: ";      
+      PrintPair(fValidation->LeftoverBlockIntervalsInLeftoverChunks);      
+   
+   }
+
+   void CreateTrainingChunksIntervals() {
+      
+      std::mt19937 g(42);
+      
+      
+      std::shuffle(fTraining->FullBlockIntervalsInFullChunks.begin(), fTraining->FullBlockIntervalsInFullChunks.end(), g);
+      std::shuffle(fTraining->LeftoverBlockIntervalsInFullChunks.begin() ,fTraining->LeftoverBlockIntervalsInFullChunks.end(), g);      
+      std::shuffle(fTraining->FullBlockIntervalsInLeftoverChunks.begin() ,fTraining->FullBlockIntervalsInLeftoverChunks.end(), g);
+      std::shuffle(fTraining->LeftoverBlockIntervalsInLeftoverChunks.begin() ,fTraining->LeftoverBlockIntervalsInLeftoverChunks.end(), g);      
+
+      fTraining->CreateChunksIntervals();
+
+      std::shuffle(fTraining->ChunksIntervals.begin() ,fTraining->ChunksIntervals.end(), g);
+      
+      fTraining->SizeOfChunks();
+      
+      std::cout << std::endl;
+      for (int i = 0; i < fTraining->Chunks; i++) {
+         std::cout << "chunk " << i + 1 << ": ";
+         PrintChunk(fTraining->ChunksIntervals, i);
+      }
+
+      std::cout << std::endl;
+      std::cout << "Chunk sizes" << std::endl;
+      PrintVectorSize(fTraining->ChunksSizes);
+      std::cout << std::endl;      
+   }
+
+   void CreateValidationChunksIntervals() {
+      
+      std::mt19937 g(42);
+      
+      
+      std::shuffle(fValidation->FullBlockIntervalsInFullChunks.begin(), fValidation->FullBlockIntervalsInFullChunks.end(), g);
+      std::shuffle(fValidation->LeftoverBlockIntervalsInFullChunks.begin() ,fValidation->LeftoverBlockIntervalsInFullChunks.end(), g);      
+      std::shuffle(fValidation->FullBlockIntervalsInLeftoverChunks.begin() ,fValidation->FullBlockIntervalsInLeftoverChunks.end(), g);
+      std::shuffle(fValidation->LeftoverBlockIntervalsInLeftoverChunks.begin() ,fValidation->LeftoverBlockIntervalsInLeftoverChunks.end(), g);      
+
+      fValidation->CreateChunksIntervals();
+
+      // std::shuffle(fValidation->ChunksIntervals.begin() ,fValidation->ChunksIntervals.end(), g);
+
+      fValidation->SizeOfChunks();
+      
+      std::cout << std::endl;
+      for (int i = 0; i < fValidation->Chunks; i++) {
+         std::cout << "chunk " << i + 1 << ": ";
+         PrintChunk(fValidation->ChunksIntervals, i);
+      }
+
+      std::cout << std::endl;
+      std::cout << "Chunk sizes" << std::endl;
+      PrintVectorSize(fValidation->ChunksSizes);
+      std::cout << std::endl;      
+      
+   }
+   
+
+   void PrintChunks() {
+      std::cout << "Training: ";      
+      PrintPair(fTraining->BlockIntervals);
+      std::cout << "Validation: ";      
+      PrintPair(fValidation->BlockIntervals) ;     
+      
+      std::cout << std::endl;
+      std::cout << "Training" << std::endl;
+      std::cout << "Number of differnt blocks : ";
+      PrintVectorSize(fTraining->NumberOfDifferentBlocks);
+      std::cout << "Full blocks in full chunks: ";
+      PrintPair(fTraining->FullBlockIntervalsInFullChunks);
+      std::cout << "Leftover blocks in full chunks: ";     
+      PrintPair(fTraining->LeftoverBlockIntervalsInFullChunks);      
+      std::cout << "Full blocks in leftover chunks: ";      
+      PrintPair(fTraining->FullBlockIntervalsInLeftoverChunks);
+      std::cout << "Leftover blocks in leftover chunks: ";      
+      PrintPair(fTraining->LeftoverBlockIntervalsInLeftoverChunks);      
+
+      std::cout << std::endl;
+      for (int i = 0; i < fTraining->Chunks; i++) {
+         std::cout << "chunk " << i + 1 << ": ";
+         PrintChunk(fTraining->ChunksIntervals, i);
+      }
+
+
+      std::cout << std::endl;
+      for (int i = 0; i < fValidation->Chunks; i++) {
+         std::cout << "chunk " << i + 1 << ": ";
+         PrintChunk(fValidation->ChunksIntervals, i);
+      }
+            
    };
    
+   void LoadTrainingChunk(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk)
+   {
+
+      std::random_device rd;
+      std::mt19937 g(rd());
+
+      std::size_t chunkSize = fTraining->ChunksSizes[chunk];
+      
+      if (chunk < fTraining->Chunks) {
+         TMVA::Experimental::RTensor<float> Tensor({chunkSize, fNumCols});
+         TrainChunkTensor = TrainChunkTensor.Resize({{chunkSize, fNumCols}});
+
+         std::vector<int> indices(chunkSize);
+         std::iota(indices.begin(), indices.end(), 0);
+
+
+         if (fShuffle) {
+            std::shuffle(indices.begin(), indices.end(), g);
+         }
+
+         
+         std::size_t chunkEntry = 0;
+         fTraining->ChunksIntervals[chunk];
+         std::size_t IntervalsInChunk = fTraining->ChunksIntervals[chunk].size();
+         // for (std::size_t i = 0; i < IntervalsInChunk; i++) {
+
+         //    RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+         //    ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
+         //    f_rdf.Foreach(func, fCols);
+         //    chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
+         // }
+
+         // for (std::size_t i = 0; i < fChunkSize; i++) {
+         //    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+         //              TrainChunkTensor.GetData() + i * fNumCols);
+         // }
+      }
+
+      else {
+         TMVA::Experimental::RTensor<float> Tensor({fReminderTrainChunkSize, fNumCols});
+         TrainChunkTensor = TrainChunkTensor.Resize({{fReminderTrainChunkSize, fNumCols}});
+
+         std::vector<int> indices(fReminderTrainChunkSize);
+         std::iota(indices.begin(), indices.end(), 0);
+
+         std::random_device rd;
+         std::mt19937 g(rd());
+
+         if (fShuffle) {
+            std::shuffle(indices.begin(), indices.end(), g);
+         }
+
+         std::size_t chunkEntry = 0;
+         for (std::size_t i = 0; i < fNumReminderTrainChunkRanges; i++) {
+            std::size_t entry = chunk * fNumFullChunkRanges + i;
+
+            RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
+            f_rdf.Foreach(func, fCols);
+            chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
+         }
+
+         for (std::size_t i = 0; i < fReminderTrainChunkSize; i++) {
+            std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                      TrainChunkTensor.GetData() + i * fNumCols);
+         }
+      }
+   }
    
+   void TestChunkDist() {
+      std::cout << "Under construction" << std::endl;
+      std::cout << fTraining->BlockPerLeftoverChunk << std::endl;      
+      std::cout << fTraining->SizeOfBlocks[1] << std::endl;
+   }
+
    void CreateRangeVector()
    {
       std::random_device rd;

@@ -110,7 +110,15 @@ public:
       fChunkLoader->PrintChunkDistributions();
       fChunkLoader->PrintRangeDistributions();
 
-      fChunkLoader->CalculateBlockBoundaries();
+      // fChunkLoader->CalculateBlockBoundaries();
+      fChunkLoader->SplitDatasetIntoTrainingAndValidation();
+      fChunkLoader->CreateTrainingChunksIntervals();      
+      fChunkLoader->CreateValidationChunksIntervals();
+      fChunkLoader->PrintChunks();
+      // fChunkLoader->CalculateBlockBoundariesPointer();      
+
+      fChunkLoader->TestChunkDist();
+            
       fChunkLoader->CreateRangeVector();
       fChunkLoader->SortRangeVector();
 
