@@ -75,6 +75,7 @@ public:
       : fChunkSize(chunkSize), fBatchSize(batchSize), fNumColumns(numColumns)
    {
       // fPrimaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(fBatchSize, fNumColumns);
+      // fPrimaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{0, 0});
       fPrimaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
       fSecondaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
 
@@ -118,34 +119,34 @@ public:
       fBatchCondition.notify_all();
    }
 
-   TMVA::Experimental::RTensor<float> GetTrainBatch()
-   {
+   // TMVA::Experimental::RTensor<float> GetTrainBatch()
+   // {
 
-      if (fTrainingBatchQueue.empty()) {
-         fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
-         return *fCurrentBatch;
-      }
+   //    if (fTrainingBatchQueue.empty()) {
+   //       fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
+   //       return *fCurrentBatch;
+   //    }
 
-      fCurrentBatch = std::move(fTrainingBatchQueue.front());
-      fTrainingBatchQueue.pop();
+   //    fCurrentBatch = std::move(fTrainingBatchQueue.front());
+   //    fTrainingBatchQueue.pop();
 
-      // std::cout << *fCurrentBatch << std::endl;
-      return *fCurrentBatch;
-   }
+   //    // std::cout << *fCurrentBatch << std::endl;
+   //    return *fCurrentBatch;
+   // }
 
-   TMVA::Experimental::RTensor<float> GetValidationBatch()
-   {
+   // TMVA::Experimental::RTensor<float> GetValidationBatch()
+   // {
 
-      if (fValidationBatchQueue.empty()) {
-         fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
-         return *fCurrentBatch;
-      }
-      fCurrentBatch = std::move(fValidationBatchQueue.front());
-      fValidationBatchQueue.pop();
+   //    if (fValidationBatchQueue.empty()) {
+   //       fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
+   //       return *fCurrentBatch;
+   //    }
+   //    fCurrentBatch = std::move(fValidationBatchQueue.front());
+   //    fValidationBatchQueue.pop();
 
-      // std::cout << *fCurrentBatch << std::endl;
-      return *fCurrentBatch;
-   }
+   //    // std::cout << *fCurrentBatch << std::endl;
+   //    return *fCurrentBatch;
+   // }
 
    /// \brief Return a batch of data as a unique pointer.
    /// After the batch has been processed, it should be destroyed.
@@ -336,49 +337,49 @@ public:
       }
    }
    
-   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> GetTestTrainingBatchQueue()
-   {
-      return std::move(fTestTrainingBatchQueue);
-   }  
+   // std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> GetTestTrainingBatchQueue()
+   // {
+   //    return std::move(fTestTrainingBatchQueue);
+   // }  
 
-   void SaveReminderBatch(TMVA::Experimental::RTensor<float> &chunkTensor,
-                          TMVA::Experimental::RTensor<float> &reminderBatchesTensor, std::size_t idxs)
-   {
-      std::copy(chunkTensor.GetData() + (fNumChunkBatches * fBatchSize * fNumColumns),
-                chunkTensor.GetData() +
-                   (fNumChunkBatches * fBatchSize * fNumColumns + fChunkReminderBatchSize * fNumColumns),
-                reminderBatchesTensor.GetData() + (idxs * fChunkReminderBatchSize * fNumColumns));
-   }
+   // void SaveReminderBatch(TMVA::Experimental::RTensor<float> &chunkTensor,
+   //                        TMVA::Experimental::RTensor<float> &reminderBatchesTensor, std::size_t idxs)
+   // {
+   //    std::copy(chunkTensor.GetData() + (fNumChunkBatches * fBatchSize * fNumColumns),
+   //              chunkTensor.GetData() +
+   //                 (fNumChunkBatches * fBatchSize * fNumColumns + fChunkReminderBatchSize * fNumColumns),
+   //              reminderBatchesTensor.GetData() + (idxs * fChunkReminderBatchSize * fNumColumns));
+   // }
 
-   void CreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
-   {
+   // void CreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
+   // {
 
-      std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
+   //    std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
 
-      for (std::size_t i = 0; i < fNumChunkBatches; i++) {
-         // Fill a batch
-         batches.emplace_back(CreateBatch(chunkTensor, i));
-      }
+   //    for (std::size_t i = 0; i < fNumChunkBatches; i++) {
+   //       // Fill a batch
+   //       batches.emplace_back(CreateBatch(chunkTensor, i));
+   //    }
 
-      for (std::size_t i = 0; i < batches.size(); i++) {
-         fTrainingBatchQueue.push(std::move(batches[i]));
-      }
-   }
+   //    for (std::size_t i = 0; i < batches.size(); i++) {
+   //       fTrainingBatchQueue.push(std::move(batches[i]));
+   //    }
+   // }
 
-   void CreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
-   {
+   // void CreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor)
+   // {
 
-      std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
+   //    std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
 
-      for (std::size_t i = 0; i < fNumChunkBatches; i++) {
-         // Fill a batch
-         batches.emplace_back(CreateBatch(chunkTensor, i));
-      }
+   //    for (std::size_t i = 0; i < fNumChunkBatches; i++) {
+   //       // Fill a batch
+   //       batches.emplace_back(CreateBatch(chunkTensor, i));
+   //    }
 
-      for (std::size_t i = 0; i < batches.size(); i++) {
-         fValidationBatchQueue.push(std::move(batches[i]));
-      }
-   }
+   //    for (std::size_t i = 0; i < batches.size(); i++) {
+   //       fValidationBatchQueue.push(std::move(batches[i]));
+   //    }
+   // }
 
    // void CopyReminderBatch()
 
@@ -386,11 +387,11 @@ public:
    //   return fTrainingBatchQueue;
    // }
 
-   std::size_t GetNumTrainingBatchQueue() { return fTrainingBatchQueue.size(); }
+   // std::size_t GetNumTrainingBatchQueue() { return fTrainingBatchQueue.size(); }
    std::size_t TestGetNumTrainingBatchQueue() { return fTestTrainingBatchQueue.size(); }
    std::size_t TestGetNumValidationBatchQueue() { return fTestValidationBatchQueue.size(); }      
 
-   std::size_t GetNumValidationBatchQueue() { return fValidationBatchQueue.size(); }
+   // std::size_t GetNumValidationBatchQueue() { return fValidationBatchQueue.size(); }
 };
 
 // } // namespace Internal
