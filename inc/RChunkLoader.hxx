@@ -356,7 +356,7 @@ public:
       PrintPair(chunk);
    }
    
-   void SplitDatasetIntoTrainingAndValidation()
+   void SplitDataset()
    {
       // std::random_device rd;
       // std::mt19937 g(rd());
@@ -547,7 +547,7 @@ public:
             
    };
    
-   void LoadTrainingChunk(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk)
+   void LoadTrainingChunkTest(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk)
    {
 
       std::random_device rd;
@@ -567,61 +567,65 @@ public:
             std::shuffle(indices.begin(), indices.end(), g);
          }
 
-         
          std::size_t chunkEntry = 0;
-         fTraining->ChunksIntervals[chunk];
-         std::size_t IntervalsInChunk = fTraining->ChunksIntervals[chunk].size();
-         // for (std::size_t i = 0; i < IntervalsInChunk; i++) {
+         std::vector<std::pair<Long_t, Long_t>> BlocksInChunk = fTraining->ChunksIntervals[chunk];
+         for (std::size_t i = 0; i < BlocksInChunk.size(); i++) {
 
-         //    RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
-         //    ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
-         //    f_rdf.Foreach(func, fCols);
-         //    chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
-         // }
+            RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
+            f_rdf.Foreach(func, fCols);
+            chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
+         }
 
-         // for (std::size_t i = 0; i < fChunkSize; i++) {
-         //    std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
-         //              TrainChunkTensor.GetData() + i * fNumCols);
-         // }
+         // shuffle data in RTensor
+         for (std::size_t i = 0; i < chunkSize; i++) {
+            std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
+                      TrainChunkTensor.GetData() + i * fNumCols);
+         }
       }
+   }
 
-      else {
-         TMVA::Experimental::RTensor<float> Tensor({fReminderTrainChunkSize, fNumCols});
-         TrainChunkTensor = TrainChunkTensor.Resize({{fReminderTrainChunkSize, fNumCols}});
+   void LoadValidationChunkTest(TMVA::Experimental::RTensor<float> &ValidationChunkTensor, std::size_t chunk)
+   {
 
-         std::vector<int> indices(fReminderTrainChunkSize);
+      std::random_device rd;
+      std::mt19937 g(rd());
+
+      std::size_t chunkSize = fValidation->ChunksSizes[chunk];
+      
+      if (chunk < fValidation->Chunks) {
+         TMVA::Experimental::RTensor<float> Tensor({chunkSize, fNumCols});
+         ValidationChunkTensor = ValidationChunkTensor.Resize({{chunkSize, fNumCols}});
+
+         std::vector<int> indices(chunkSize);
          std::iota(indices.begin(), indices.end(), 0);
 
-         std::random_device rd;
-         std::mt19937 g(rd());
 
          if (fShuffle) {
             std::shuffle(indices.begin(), indices.end(), g);
          }
 
          std::size_t chunkEntry = 0;
-         for (std::size_t i = 0; i < fNumReminderTrainChunkRanges; i++) {
-            std::size_t entry = chunk * fNumFullChunkRanges + i;
+         std::vector<std::pair<Long_t, Long_t>> BlocksInChunk = fValidation->ChunksIntervals[chunk];
+         for (std::size_t i = 0; i < BlocksInChunk.size(); i++) {
 
             RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
-            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, fTrainRanges[entry].first, fTrainRanges[entry].second);
+            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
             f_rdf.Foreach(func, fCols);
-            chunkEntry += fTrainRanges[entry].second - fTrainRanges[entry].first;
+            chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
          }
 
-         for (std::size_t i = 0; i < fReminderTrainChunkSize; i++) {
+         // shuffle data in RTensor
+         for (std::size_t i = 0; i < chunkSize; i++) {
             std::copy(Tensor.GetData() + indices[i] * fNumCols, Tensor.GetData() + (indices[i] + 1) * fNumCols,
-                      TrainChunkTensor.GetData() + i * fNumCols);
+                      ValidationChunkTensor.GetData() + i * fNumCols);
          }
       }
    }
-   
-   void TestChunkDist() {
-      std::cout << "Under construction" << std::endl;
-      std::cout << fTraining->BlockPerLeftoverChunk << std::endl;      
-      std::cout << fTraining->SizeOfBlocks[1] << std::endl;
-   }
 
+   std::vector<std::size_t> GetTrainingChunkSizes() {return fTraining->ChunksSizes;}   
+   std::vector<std::size_t> GetValidationChunkSizes() {return fValidation->ChunksSizes;}
+  
    void CreateRangeVector()
    {
       std::random_device rd;
@@ -1095,9 +1099,9 @@ public:
       }
    };
 
-   std::size_t GetNumTrainChunks() { return fNumTrainChunks; }
+   std::size_t GetNumTrainChunks() { return fTraining->Chunks; }
 
-   std::size_t GetNumValidationChunks() { return fNumValidationChunks; }
+   std::size_t GetNumValidationChunks() { return fTraining->Chunksa; }
 
    std::size_t GetNumberOfFullTrainingChunks() { return fNumFullTrainChunks; }
 
