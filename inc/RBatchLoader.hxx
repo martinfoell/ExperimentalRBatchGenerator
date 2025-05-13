@@ -51,7 +51,8 @@ private:
    std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTrainingBatchQueue;
    std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fValidationBatchQueue;
 
-   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTestTrainingBatchQueue;   
+   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTestTrainingBatchQueue;
+   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTestValidationBatchQueue;      
 
    std::size_t fNumTrainingBatchQueue;
    std::size_t fNumValidationBatchQueue;
@@ -59,10 +60,16 @@ private:
    std::unique_ptr<TMVA::Experimental::RTensor<float>> fCurrentBatch;
 
    std::size_t fCurrentPrimaryLeftoverTrainingBatchSize;
+   std::size_t fCurrentPrimaryLeftoverValidationBatchSize;   
    std::size_t fFreeSize;
+   std::size_t fFreeTrainingSize;
+   std::size_t fFreeValidationSize;
    std::unique_ptr<TMVA::Experimental::RTensor<float>> fPrimaryLeftoverTrainingBatch;
    std::unique_ptr<TMVA::Experimental::RTensor<float>> fSecondaryLeftoverTrainingBatch;   
 
+   std::unique_ptr<TMVA::Experimental::RTensor<float>> fPrimaryLeftoverValidationBatch;
+   std::unique_ptr<TMVA::Experimental::RTensor<float>> fSecondaryLeftoverValidationBatch;   
+   
 public:
    RBatchLoader(std::size_t chunkSize, std::size_t batchSize, std::size_t numColumns)
       : fChunkSize(chunkSize), fBatchSize(batchSize), fNumColumns(numColumns)
@@ -71,6 +78,9 @@ public:
       fPrimaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
       fSecondaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
 
+      fPrimaryLeftoverValidationBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
+      fSecondaryLeftoverValidationBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
+      
       fNumTrainingBatchQueue = fTrainingBatchQueue.size();
       fNumValidationBatchQueue = fValidationBatchQueue.size();
 
@@ -78,7 +88,10 @@ public:
       fChunkReminderBatchSize = fChunkSize % fBatchSize;
 
       fCurrentPrimaryLeftoverTrainingBatchSize = 0;
-      fFreeSize = fBatchSize;      
+      fCurrentPrimaryLeftoverValidationBatchSize = 0;      
+      fFreeValidationSize = fBatchSize;
+      fFreeTrainingSize = fBatchSize;
+      fFreeSize = fBatchSize;            
    }
 
 public:
@@ -182,6 +195,22 @@ public:
       // std::cout << *fCurrentBatch << std::endl;
       return *fCurrentBatch;
    }
+
+   TMVA::Experimental::RTensor<float> TestGetValidationBatch()
+   {
+
+      std::cout << "Quu " << fTestValidationBatchQueue.size() << std::endl;
+      if (fTestValidationBatchQueue.empty()) {
+         fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
+         return *fCurrentBatch;
+      }
+
+      fCurrentBatch = std::move(fTestValidationBatchQueue.front());
+      fTestValidationBatchQueue.pop();
+
+      // std::cout << *fCurrentBatch << std::endl;
+      return *fCurrentBatch;
+   }
    
    void TestCreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
       std::size_t ChunkSize = chunkTensor.GetShape()[0];
@@ -245,6 +274,68 @@ public:
       }
    }
 
+   void TestCreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
+      std::size_t ChunkSize = chunkTensor.GetShape()[0];
+      std::size_t NumCols = chunkTensor.GetShape()[1];      
+      std::size_t Batches = ChunkSize / fBatchSize;
+      std::size_t LeftoverBatchSize = ChunkSize % fBatchSize;      
+
+      std::vector<std::unique_ptr<TMVA::Experimental::RTensor<float>>> batches;
+
+      for (std::size_t i = 0; i < Batches; i++) {
+         // Fill a batch
+         batches.emplace_back(CreateBatch(chunkTensor, i));
+      }
+      
+      TMVA::Experimental::RTensor<float> LeftoverBatch({LeftoverBatchSize, NumCols});
+      std::copy(chunkTensor.GetData() + (Batches * fBatchSize * NumCols ), chunkTensor.GetData() + (Batches * fBatchSize * NumCols + LeftoverBatchSize * NumCols), LeftoverBatch.GetData());
+      
+      std::cout << "Chunk (" << ChunkSize << "):" << std::endl;
+      PrintTensor(chunkTensor);
+      std::cout << "Leftover batch from chunk (" << LeftoverBatchSize << "):" << std::endl;
+      PrintTensor(LeftoverBatch);
+      
+      if (fFreeValidationSize > LeftoverBatchSize) {
+         std::copy(LeftoverBatch.GetData() , LeftoverBatch.GetData() + (LeftoverBatchSize * NumCols), fPrimaryLeftoverValidationBatch->GetData() + (fCurrentPrimaryLeftoverValidationBatchSize * NumCols));
+
+         fCurrentPrimaryLeftoverValidationBatchSize += LeftoverBatchSize;
+      }
+
+      if (fFreeValidationSize == LeftoverBatchSize) {
+         std::copy(LeftoverBatch.GetData() , LeftoverBatch.GetData() + (LeftoverBatchSize * NumCols), fPrimaryLeftoverValidationBatch->GetData() + (fCurrentPrimaryLeftoverValidationBatchSize * fNumColumns));
+         
+         auto copy = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
+         std::copy(fPrimaryLeftoverValidationBatch->GetData(), fPrimaryLeftoverValidationBatch->GetData() + (fBatchSize * fNumColumns), copy->GetData());
+         batches.emplace_back(std::move(copy));
+         
+         *fPrimaryLeftoverValidationBatch = *fSecondaryLeftoverValidationBatch;
+         fSecondaryLeftoverValidationBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
+         
+         fCurrentPrimaryLeftoverValidationBatchSize = 0;         
+      }
+      
+      else if (fFreeValidationSize < LeftoverBatchSize) {
+         std::copy(LeftoverBatch.GetData(), LeftoverBatch.GetData() + (fFreeValidationSize * fNumColumns), fPrimaryLeftoverValidationBatch->GetData() + (fCurrentPrimaryLeftoverValidationBatchSize * fNumColumns));
+         std::copy(LeftoverBatch.GetData() + (fFreeValidationSize * fNumColumns), LeftoverBatch.GetData() + (LeftoverBatchSize * fNumColumns), fSecondaryLeftoverValidationBatch->GetData());
+
+         
+         auto copy = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
+         std::copy(fPrimaryLeftoverValidationBatch->GetData(), fPrimaryLeftoverValidationBatch->GetData() + (fBatchSize * fNumColumns), copy->GetData());
+         batches.emplace_back(std::move(copy));
+         
+         *fPrimaryLeftoverValidationBatch = *fSecondaryLeftoverValidationBatch;
+         fSecondaryLeftoverValidationBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});      
+
+         fCurrentPrimaryLeftoverValidationBatchSize = LeftoverBatchSize - fFreeValidationSize;
+      }
+      
+      fFreeValidationSize = fBatchSize - fCurrentPrimaryLeftoverValidationBatchSize;
+      
+      for (std::size_t i = 0; i < batches.size(); i++) {
+         fTestValidationBatchQueue.push(std::move(batches[i]));
+      }
+   }
+   
    std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> GetTestTrainingBatchQueue()
    {
       return std::move(fTestTrainingBatchQueue);
@@ -296,7 +387,8 @@ public:
    // }
 
    std::size_t GetNumTrainingBatchQueue() { return fTrainingBatchQueue.size(); }
-   std::size_t TestGetNumTrainingBatchQueue() { return fTestTrainingBatchQueue.size(); }   
+   std::size_t TestGetNumTrainingBatchQueue() { return fTestTrainingBatchQueue.size(); }
+   std::size_t TestGetNumValidationBatchQueue() { return fTestValidationBatchQueue.size(); }      
 
    std::size_t GetNumValidationBatchQueue() { return fValidationBatchQueue.size(); }
 };

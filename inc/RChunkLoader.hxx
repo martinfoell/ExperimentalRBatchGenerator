@@ -1101,7 +1101,7 @@ public:
 
    std::size_t GetNumTrainChunks() { return fTraining->Chunks; }
 
-   std::size_t GetNumValidationChunks() { return fTraining->Chunksa; }
+   std::size_t GetNumValidationChunks() { return fValidation->Chunks; }
 
    std::size_t GetNumberOfFullTrainingChunks() { return fNumFullTrainChunks; }
 
