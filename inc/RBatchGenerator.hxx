@@ -313,7 +313,6 @@ public:
       }
 
       if (batchQueue < 1 && fTrainingChunkNum < fNumTrainingChunks) {
-      // if (batchQueue < 1 && fTrainingChunkNum < 2) {         
          fChunkLoader->LoadTrainingChunkTest(fTrainChunkTensor, fTrainingChunkNum);
          fBatchLoader->TestCreateTrainingBatches(fTrainChunkTensor);
 
@@ -335,7 +334,6 @@ public:
       }
 
       if (batchQueue < 1 && fValidationChunkNum < fNumValidationChunks) {
-         std::cout << batchQueue << std::endl;
          fChunkLoader->LoadValidationChunkTest(fValidationChunkTensor, fValidationChunkNum);
          fBatchLoader->TestCreateValidationBatches(fValidationChunkTensor);
          fValidationChunkNum++;

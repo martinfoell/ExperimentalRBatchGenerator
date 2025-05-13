@@ -228,10 +228,10 @@ public:
       TMVA::Experimental::RTensor<float> LeftoverBatch({LeftoverBatchSize, NumCols});
       std::copy(chunkTensor.GetData() + (Batches * fBatchSize * NumCols ), chunkTensor.GetData() + (Batches * fBatchSize * NumCols + LeftoverBatchSize * NumCols), LeftoverBatch.GetData());
       
-      std::cout << "Chunk (" << ChunkSize << "):" << std::endl;
-      PrintTensor(chunkTensor);
-      std::cout << "Leftover batch from chunk (" << LeftoverBatchSize << "):" << std::endl;
-      PrintTensor(LeftoverBatch);
+      // std::cout << "Chunk (" << ChunkSize << "):" << std::endl;
+      // PrintTensor(chunkTensor);
+      // std::cout << "Leftover batch from chunk (" << LeftoverBatchSize << "):" << std::endl;
+      // PrintTensor(LeftoverBatch);
       
       if (fFreeSize > LeftoverBatchSize) {
          std::copy(LeftoverBatch.GetData() , LeftoverBatch.GetData() + (LeftoverBatchSize * NumCols), fPrimaryLeftoverTrainingBatch->GetData() + (fCurrentPrimaryLeftoverTrainingBatchSize * NumCols));
@@ -290,10 +290,10 @@ public:
       TMVA::Experimental::RTensor<float> LeftoverBatch({LeftoverBatchSize, NumCols});
       std::copy(chunkTensor.GetData() + (Batches * fBatchSize * NumCols ), chunkTensor.GetData() + (Batches * fBatchSize * NumCols + LeftoverBatchSize * NumCols), LeftoverBatch.GetData());
       
-      std::cout << "Chunk (" << ChunkSize << "):" << std::endl;
-      PrintTensor(chunkTensor);
-      std::cout << "Leftover batch from chunk (" << LeftoverBatchSize << "):" << std::endl;
-      PrintTensor(LeftoverBatch);
+      // std::cout << "Chunk (" << ChunkSize << "):" << std::endl;
+      // PrintTensor(chunkTensor);
+      // std::cout << "Leftover batch from chunk (" << LeftoverBatchSize << "):" << std::endl;
+      // PrintTensor(LeftoverBatch);
       
       if (fFreeValidationSize > LeftoverBatchSize) {
          std::copy(LeftoverBatch.GetData() , LeftoverBatch.GetData() + (LeftoverBatchSize * NumCols), fPrimaryLeftoverValidationBatch->GetData() + (fCurrentPrimaryLeftoverValidationBatchSize * NumCols));

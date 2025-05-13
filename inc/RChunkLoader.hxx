@@ -465,6 +465,7 @@ public:
       std::shuffle(fTraining->FullBlockIntervalsInLeftoverChunks.begin() ,fTraining->FullBlockIntervalsInLeftoverChunks.end(), g);
       std::shuffle(fTraining->LeftoverBlockIntervalsInLeftoverChunks.begin() ,fTraining->LeftoverBlockIntervalsInLeftoverChunks.end(), g);      
 
+      fTraining->ChunksIntervals = {};
       fTraining->CreateChunksIntervals();
 
       std::shuffle(fTraining->ChunksIntervals.begin() ,fTraining->ChunksIntervals.end(), g);
@@ -493,6 +494,7 @@ public:
       std::shuffle(fValidation->FullBlockIntervalsInLeftoverChunks.begin() ,fValidation->FullBlockIntervalsInLeftoverChunks.end(), g);
       std::shuffle(fValidation->LeftoverBlockIntervalsInLeftoverChunks.begin() ,fValidation->LeftoverBlockIntervalsInLeftoverChunks.end(), g);      
 
+      fValidation->ChunksIntervals = {};      
       fValidation->CreateChunksIntervals();
 
       // std::shuffle(fValidation->ChunksIntervals.begin() ,fValidation->ChunksIntervals.end(), g);
