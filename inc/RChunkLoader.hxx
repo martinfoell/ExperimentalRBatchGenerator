@@ -405,7 +405,7 @@ public:
             
    };
    
-   void LoadTrainingChunkTest(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk)
+   void LoadTrainingChunk(TMVA::Experimental::RTensor<float> &TrainChunkTensor, std::size_t chunk)
    {
 
       std::random_device rd;
@@ -443,7 +443,7 @@ public:
       }
    }
 
-   void LoadValidationChunkTest(TMVA::Experimental::RTensor<float> &ValidationChunkTensor, std::size_t chunk)
+   void LoadValidationChunk(TMVA::Experimental::RTensor<float> &ValidationChunkTensor, std::size_t chunk)
    {
 
       std::random_device rd;

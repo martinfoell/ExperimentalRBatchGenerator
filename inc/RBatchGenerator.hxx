@@ -185,7 +185,7 @@ public:
 
    TMVA::Experimental::RTensor<float> GetTrainBatch()
    {
-      auto batchQueue = fBatchLoader->TestGetNumTrainingBatchQueue();
+      auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
       
       // New epoch
       if (fEpochActive == false) {
@@ -195,18 +195,18 @@ public:
       }
 
       if (batchQueue < 1 && fTrainingChunkNum < fNumTrainingChunks) {
-         fChunkLoader->LoadTrainingChunkTest(fTrainChunkTensor, fTrainingChunkNum);
-         fBatchLoader->TestCreateTrainingBatches(fTrainChunkTensor);
+         fChunkLoader->LoadTrainingChunk(fTrainChunkTensor, fTrainingChunkNum);
+         fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
 
          fTrainingChunkNum++;
       }
       // Get next batch if available
-      return fBatchLoader->TestGetTrainBatch();
+      return fBatchLoader->GetTrainBatch();
    }
    
    TMVA::Experimental::RTensor<float> GetValidationBatch()
    {
-      auto batchQueue = fBatchLoader->TestGetNumValidationBatchQueue();
+      auto batchQueue = fBatchLoader->GetNumValidationBatchQueue();
 
       // New epoch
       if (fEpochActive == false) {
@@ -216,14 +216,14 @@ public:
       }
 
       if (batchQueue < 1 && fValidationChunkNum < fNumValidationChunks) {
-         fChunkLoader->LoadValidationChunkTest(fValidationChunkTensor, fValidationChunkNum);
-         fBatchLoader->TestCreateValidationBatches(fValidationChunkTensor);
+         fChunkLoader->LoadValidationChunk(fValidationChunkTensor, fValidationChunkNum);
+         fBatchLoader->CreateValidationBatches(fValidationChunkTensor);
          fValidationChunkNum++;
       }
 
       std::cout << "Chunk num: " << fValidationChunkNum << " " << fNumValidationChunks << std::endl;
       // Get next batch if available
-      return fBatchLoader->TestGetValidationBatch();
+      return fBatchLoader->GetValidationBatch();
    }
 
    /// \brief Returns the next batch of validation data if available.

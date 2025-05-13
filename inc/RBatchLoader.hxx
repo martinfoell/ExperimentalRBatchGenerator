@@ -51,9 +51,6 @@ private:
    std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTrainingBatchQueue;
    std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fValidationBatchQueue;
 
-   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTestTrainingBatchQueue;
-   std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> fTestValidationBatchQueue;      
-
    std::size_t fNumTrainingBatchQueue;
    std::size_t fNumValidationBatchQueue;
 
@@ -84,9 +81,6 @@ public:
       
       fNumTrainingBatchQueue = fTrainingBatchQueue.size();
       fNumValidationBatchQueue = fValidationBatchQueue.size();
-
-      fNumChunkBatches = fChunkSize / fBatchSize;
-      fChunkReminderBatchSize = fChunkSize % fBatchSize;
 
       fCurrentPrimaryLeftoverTrainingBatchSize = 0;
       fCurrentPrimaryLeftoverValidationBatchSize = 0;      
@@ -153,38 +147,38 @@ public:
    }
 
    
-   TMVA::Experimental::RTensor<float> TestGetTrainBatch()
+   TMVA::Experimental::RTensor<float> GetTrainBatch()
    {
 
-      if (fTestTrainingBatchQueue.empty()) {
+      if (fTrainingBatchQueue.empty()) {
          fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
          return *fCurrentBatch;
       }
 
-      fCurrentBatch = std::move(fTestTrainingBatchQueue.front());
-      fTestTrainingBatchQueue.pop();
+      fCurrentBatch = std::move(fTrainingBatchQueue.front());
+      fTrainingBatchQueue.pop();
 
       // std::cout << *fCurrentBatch << std::endl;
       return *fCurrentBatch;
    }
 
-   TMVA::Experimental::RTensor<float> TestGetValidationBatch()
+   TMVA::Experimental::RTensor<float> GetValidationBatch()
    {
 
-      std::cout << "Quu " << fTestValidationBatchQueue.size() << std::endl;
-      if (fTestValidationBatchQueue.empty()) {
+      std::cout << "Quu " << fValidationBatchQueue.size() << std::endl;
+      if (fValidationBatchQueue.empty()) {
          fCurrentBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>({0}));
          return *fCurrentBatch;
       }
 
-      fCurrentBatch = std::move(fTestValidationBatchQueue.front());
-      fTestValidationBatchQueue.pop();
+      fCurrentBatch = std::move(fValidationBatchQueue.front());
+      fValidationBatchQueue.pop();
 
       // std::cout << *fCurrentBatch << std::endl;
       return *fCurrentBatch;
    }
    
-   void TestCreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
+   void CreateTrainingBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
       std::size_t ChunkSize = chunkTensor.GetShape()[0];
       std::size_t NumCols = chunkTensor.GetShape()[1];      
       std::size_t Batches = ChunkSize / fBatchSize;
@@ -242,11 +236,11 @@ public:
       fFreeSize = fBatchSize - fCurrentPrimaryLeftoverTrainingBatchSize;
       
       for (std::size_t i = 0; i < batches.size(); i++) {
-         fTestTrainingBatchQueue.push(std::move(batches[i]));
+         fTrainingBatchQueue.push(std::move(batches[i]));
       }
    }
 
-   void TestCreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
+   void CreateValidationBatches(TMVA::Experimental::RTensor<float> &chunkTensor) {
       std::size_t ChunkSize = chunkTensor.GetShape()[0];
       std::size_t NumCols = chunkTensor.GetShape()[1];      
       std::size_t Batches = ChunkSize / fBatchSize;
@@ -304,11 +298,11 @@ public:
       fFreeValidationSize = fBatchSize - fCurrentPrimaryLeftoverValidationBatchSize;
       
       for (std::size_t i = 0; i < batches.size(); i++) {
-         fTestValidationBatchQueue.push(std::move(batches[i]));
+         fValidationBatchQueue.push(std::move(batches[i]));
       }
    }
-   std::size_t TestGetNumTrainingBatchQueue() { return fTestTrainingBatchQueue.size(); }
-   std::size_t TestGetNumValidationBatchQueue() { return fTestValidationBatchQueue.size(); }      
+   std::size_t GetNumTrainingBatchQueue() { return fTrainingBatchQueue.size(); }
+   std::size_t GetNumValidationBatchQueue() { return fValidationBatchQueue.size(); }      
 
 };
 
