@@ -115,57 +115,11 @@ public:
          std::make_unique<RChunkLoader<Args...>>(f_rdf, fChunkSize, fRangeSize, fValidationSplit, fCols, fShuffle);
       fBatchLoader = std::make_unique<RBatchLoader>(fChunkSize, fBatchSize, fNumColumns);
 
-      // fChunkLoader->PrintChunkDistributions();
-      // fChunkLoader->PrintRangeDistributions();
 
-      // fChunkLoader->CalculateBlockBoundaries();
       fChunkLoader->SplitDataset();
-      // fChunkLoader->CreateTrainingChunksIntervals();      
-      // fChunkLoader->CreateValidationChunksIntervals();
-      // fChunkLoader->PrintChunks();
-      // fChunkLoader->CalculateBlockBoundariesPointer();      
 
       fNumTrainingChunks = fChunkLoader->GetNumTrainChunks();
       fNumValidationChunks = fChunkLoader->GetNumValidationChunks();      
-      // std::cout << std::endl;
-      // std::cout << std::endl;
-      // fChunkLoader->LoadTrainingChunkTest(fTestTrainChunkTensor, 0);
-      // fBatchLoader->TestCreateTrainingBatches(fTestTrainChunkTensor);      
-      // std::cout << std::endl;      
-      // fChunkLoader->LoadTrainingChunkTest(fTestTrainChunkTensor, 1);
-      // fBatchLoader->TestCreateTrainingBatches(fTestTrainChunkTensor);      
-      // std::cout << std::endl;      
-      // fChunkLoader->LoadTrainingChunkTest(fTestTrainChunkTensor, 2);
-      // fBatchLoader->TestCreateTrainingBatches(fTestTrainChunkTensor);      
-      // std::cout << std::endl;      
-      // fChunkLoader->LoadTrainingChunkTest(fTestTrainChunkTensor, 3);
-      // fBatchLoader->TestCreateTrainingBatches(fTestTrainChunkTensor);
-      // std::cout << std::endl;
-      // fChunkLoader->LoadTrainingChunkTest(fTestTrainChunkTensor, 4);
-      // fBatchLoader->TestCreateTrainingBatches(fTestTrainChunkTensor);
-      // std::cout << std::endl;
-
-
-      // std::queue<std::unique_ptr<TMVA::Experimental::RTensor<float>>> Queue = fBatchLoader->GetTestTrainingBatchQueue();
-      // std::cout << "First batch: ";
-      // fBatchLoader->PrintTensor(*Queue.front());
-      // int k = 1;
-      // while (!Queue.empty()) {
-      //    std::cout << "Leftover batch " << k << ": ";
-      //    fBatchLoader->PrintTensor(*Queue.front());
-      //    Queue.pop();
-      //    k++;
-      // }
-      // std::cout << std::endl;
-
-
-      
-      
-
-      std::cout << std::endl;
-      std::cout << std::endl;
-      // std::queue<int> temp = q;  // Copy to preserve original queue
-
       
       std::vector<std::size_t> TrainingChunkSizes = fChunkLoader->GetTrainingChunkSizes();
       std::cout << "Training chunk sizes: ";
@@ -175,21 +129,6 @@ public:
       std::cout << "Validation chunk sizes: ";
       fChunkLoader->PrintVectorSize(ValidationChunkSizes);
       
-      // fChunkLoader->CreateRangeVector();
-      // fChunkLoader->SortRangeVector();
-
-      // fChunkLoader->CalculateBlockBoundaries();
-      
-
-      // fReminderBatchSize = fChunkSize % fBatchSize;
-      // std::cout << "Reminder batch size: " << fReminderBatchSize << std::endl;
-
-      // fNumFullTrainChunks = fChunkLoader->GetNumberOfFullTrainingChunks();
-      // fNumFullValidationChunks = fChunkLoader->GetNumberOfFullValidationChunks();
-
-      // fTrainBatchReminders = fTrainBatchReminders.Resize({{fNumFullTrainChunks * fReminderBatchSize, fNumColumns}});
-      // std::cout << "Number of Training chunks " << fNumFullTrainChunks << std::endl;
-
       fCurrentEpoch = 0;
 
       fChunkNum = 0;
@@ -244,63 +183,6 @@ public:
 
    void DeActivateEpoch() { fEpochActive = false; }
 
-   // TMVA::Experimental::RTensor<float> BkgGetTrainBatch()
-   // {
-   //    auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
-   //    // std::cout << "Batches in queue: " << batchQueue << std::endl;
-
-   //    // New epoch
-   //    if (fEpochActive == false) {
-   //       fChunkLoader->CreateTrainRangeVector();
-   //       fEpochActive = true;
-   //       fChunkNum = 0;
-   //    }
-
-   //    if (batchQueue < 1 && fChunkNum < fNumFullTrainChunks) {
-
-   //       fChunkLoader->LoadTrainChunk(fTrainChunkTensor, fChunkNum);
-   //       fBatchLoader->CreateTrainingBatches(fTrainChunkTensor);
-   //       fBatchLoader->SaveReminderBatch(fTrainChunkTensor, fTrainBatchReminders, fChunkNum);
-
-   //       // std::cout << " " << std::endl;
-   //       // std::cout << "Loaded chunk: " << fChunkNum + 1 << std::endl;
-   //       // std::cout << fTrainChunkTensor << std::endl;
-   //       // std::cout << " " << std::endl;
-
-   //       // std::cout << "Saved reminder batch from chunk: " << std::endl;
-   //       // std::cout << fTrainBatchReminders << std::endl;
-   //       // std::cout << " " << std::endl;
-   //       // std::cout << "Reminder batch: " << *batch << std::endl;
-
-   //       fChunkNum++;
-   //    }
-
-   //    // Get next batch if available
-   //    return fBatchLoader->GetTrainBatch();
-   // }
-
-   // TMVA::Experimental::RTensor<float> BkgGetValidationBatch()
-   // {
-   //    auto batchQueue = fBatchLoader->GetNumValidationBatchQueue();
-
-   //    // New epoch
-   //    if (fEpochActive == false) {
-   //       fChunkLoader->CreateValidationRangeVector();
-   //       fEpochActive = true;
-   //       fChunkNum = 0;
-   //    }
-
-   //    if (batchQueue < 1 && fChunkNum < fNumFullValidationChunks + 3) {
-
-   //       fChunkLoader->LoadValidationChunk(fValidationChunkTensor, fChunkNum);
-   //       fBatchLoader->CreateValidationBatches(fValidationChunkTensor);
-
-   //       fChunkNum++;
-   //    }
-   //    // Get next batch if available
-   //    return fBatchLoader->GetValidationBatch();
-   // }
-   
    TMVA::Experimental::RTensor<float> GetTrainBatch()
    {
       auto batchQueue = fBatchLoader->TestGetNumTrainingBatchQueue();
