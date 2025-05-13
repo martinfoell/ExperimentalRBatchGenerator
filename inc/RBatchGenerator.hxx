@@ -57,7 +57,7 @@ private:
 
    std::size_t fChunkNum;
    std::size_t fTrainingChunkNum;
-   std::size_t fValidationChunkNum;   
+   std::size_t fValidationChunkNum;
    std::size_t fNumEpochs;
    std::size_t fCurrentEpoch;
    bool fShuffle;
@@ -71,16 +71,8 @@ private:
 
    bool fEpochActive{false};
 
-   std::size_t fNumFullTrainChunks;
-   std::size_t fNumFullValidationChunks;
-   std::size_t fReminderBatchSize;
-
    TMVA::Experimental::RTensor<float> fTrainTensor;
    TMVA::Experimental::RTensor<float> fTrainChunkTensor;
-
-   TMVA::Experimental::RTensor<float> fTestTrainChunkTensor;
-   
-   TMVA::Experimental::RTensor<float> fTrainBatchReminders;
 
    TMVA::Experimental::RTensor<float> fValidationTensor;
    TMVA::Experimental::RTensor<float> fValidationChunkTensor;
@@ -103,8 +95,6 @@ public:
         fNumColumns(cols.size()),
         fTrainTensor({0, 0}),
         fTrainChunkTensor({0, 0}),
-        fTestTrainChunkTensor({0, 0}),        
-        fTrainBatchReminders({0, 0}),
         fValidationTensor({0, 0}),
         fValidationChunkTensor({0, 0}),
         fNotFiltered(f_rdf.GetFilterNames().empty())
@@ -115,30 +105,19 @@ public:
          std::make_unique<RChunkLoader<Args...>>(f_rdf, fChunkSize, fRangeSize, fValidationSplit, fCols, fShuffle);
       fBatchLoader = std::make_unique<RBatchLoader>(fChunkSize, fBatchSize, fNumColumns);
 
-
       fChunkLoader->SplitDataset();
 
       fNumTrainingChunks = fChunkLoader->GetNumTrainChunks();
-      fNumValidationChunks = fChunkLoader->GetNumValidationChunks();      
-      
-      std::vector<std::size_t> TrainingChunkSizes = fChunkLoader->GetTrainingChunkSizes();
-      std::cout << "Training chunk sizes: ";
-      fChunkLoader->PrintVectorSize(TrainingChunkSizes);
+      fNumValidationChunks = fChunkLoader->GetNumValidationChunks();
 
-      std::vector<std::size_t> ValidationChunkSizes = fChunkLoader->GetValidationChunkSizes();
-      std::cout << "Validation chunk sizes: ";
-      fChunkLoader->PrintVectorSize(ValidationChunkSizes);
-      
       fCurrentEpoch = 0;
 
       fChunkNum = 0;
       fTrainingChunkNum = 0;
-      fValidationChunkNum = 0;      
+      fValidationChunkNum = 0;
    }
 
    ~RBatchGenerator() { DeActivate(); }
-
-   std::size_t GetNumberOfTrainingChunks() { return fNumFullTrainChunks; }
 
    void DeActivate()
    {
@@ -186,7 +165,7 @@ public:
    TMVA::Experimental::RTensor<float> GetTrainBatch()
    {
       auto batchQueue = fBatchLoader->GetNumTrainingBatchQueue();
-      
+
       // New epoch
       if (fEpochActive == false) {
          fChunkLoader->CreateTrainingChunksIntervals();
@@ -203,7 +182,7 @@ public:
       // Get next batch if available
       return fBatchLoader->GetTrainBatch();
    }
-   
+
    TMVA::Experimental::RTensor<float> GetValidationBatch()
    {
       auto batchQueue = fBatchLoader->GetNumValidationBatchQueue();
@@ -221,7 +200,6 @@ public:
          fValidationChunkNum++;
       }
 
-      std::cout << "Chunk num: " << fValidationChunkNum << " " << fNumValidationChunks << std::endl;
       // Get next batch if available
       return fBatchLoader->GetValidationBatch();
    }
