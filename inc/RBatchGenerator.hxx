@@ -115,6 +115,15 @@ public:
       fChunkNum = 0;
       fTrainingChunkNum = 0;
       fValidationChunkNum = 0;
+
+      if (fNotFiltered) {
+         std::cout << "Not filtered" << std::endl;
+         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksNoFilters, this);
+      } else {
+         std::cout << "Filtered: needs to be implemented" << std::endl;
+         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksFilters, this);
+      }
+
    }
 
    ~RBatchGenerator() { DeActivate(); }

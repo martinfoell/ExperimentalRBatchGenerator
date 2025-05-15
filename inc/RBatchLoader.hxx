@@ -36,7 +36,7 @@ private:
    std::size_t fBatchSize;
    std::size_t fChunkSize;
    std::size_t fNumColumns;
-
+   std::size_t fMaxBatches;
    std::size_t fTrainingRemainderRow = 0;
    std::size_t fValidationRemainderRow = 0;
 
@@ -71,11 +71,16 @@ public:
       // fPrimaryLeftoverTrainingBatch = std::make_unique<TMVA::Experimental::RTensor<float>>(fBatchSize, fNumColumns);
       // fPrimaryLeftoverTrainingBatch =
       // std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{0, 0});
+      // fPrimaryLeftoverTrainingBatch =
+      //    std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{0, 0});
+      // fSecondaryLeftoverTrainingBatch =
+      //    std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{0, 0});
+
       fPrimaryLeftoverTrainingBatch =
          std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
       fSecondaryLeftoverTrainingBatch =
          std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
-
+      
       fPrimaryLeftoverValidationBatch =
          std::make_unique<TMVA::Experimental::RTensor<float>>(std::vector<std::size_t>{fBatchSize, fNumColumns});
       fSecondaryLeftoverValidationBatch =

@@ -142,6 +142,8 @@ private:
    bool fNotFiltered;
    bool fShuffle;
 
+   ROOT::RDF::RResultPtr<std::vector<ULong64_t>> fEntries;
+
    std::unique_ptr<RChunkConstructor> fTraining;
    std::unique_ptr<RChunkConstructor> fValidation;
 
@@ -157,8 +159,29 @@ public:
         fShuffle(shuffle)
 
    {
+      // if (fNotFiltered) {
+      //    fNumEntries = f_rdf.Count().GetValue();
+      // }
+
+      fNumEntries = f_rdf.Count().GetValue();
       if (fNotFiltered) {
          fNumEntries = f_rdf.Count().GetValue();
+         std::cout << "Entries: " << fNumEntries << std::endl;
+         std::cout << "Not filtered" << std::endl;
+         // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksNoFilters, this);
+      } else {
+         auto report = f_rdf.Report();
+         fEntries = f_rdf.Take<ULong64_t>("rdfentry_");
+         // add the last element in entries to not go out range when filling chunk
+         fEntries->push_back((*fEntries)[fNumEntries - 1] + 1);         
+         for (int i = 0; i < fEntries->size(); i++) {
+            std::cout << (*fEntries)[i] << std::endl;
+         }
+         std::cout << "Size of fEntries: " << fEntries->size() << std::endl;
+         std::size_t numAllEntries = report.begin()->GetAll();
+         
+         std::cout << "Filtered: needs to be implemented" << std::endl;
+         std::cout << "Entries: " << fNumEntries << " " << numAllEntries << std::endl;         
       }
 
       fNumCols = fCols.size();
@@ -169,6 +192,8 @@ public:
 
       fTraining = std::make_unique<RChunkConstructor>(fNumTrainEntries, fChunkSize, fRangeSize);
       fValidation = std::make_unique<RChunkConstructor>(fNumValidationEntries, fChunkSize, fRangeSize);
+      std::cout << "Number of entries: " << fNumEntries << std::endl;
+         
    }
 
    void PrintVector(std::vector<Long_t> vec)
@@ -432,10 +457,23 @@ public:
          std::vector<std::pair<Long_t, Long_t>> BlocksInChunk = fTraining->ChunksIntervals[chunk];
          for (std::size_t i = 0; i < BlocksInChunk.size(); i++) {
 
-            RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
-            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
-            f_rdf.Foreach(func, fCols);
-            chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
+            if (fNotFiltered) {            
+               RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+               ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
+               f_rdf.Foreach(func, fCols);
+               chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
+            }
+            
+            else {            
+               std::size_t blockSize = BlocksInChunk[i].second - BlocksInChunk[i].first;
+               std::cout << "Block size: " << blockSize << std::endl;
+               for (std::size_t j = 0; j < blockSize ; j++) {
+                  RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+                  ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, (*fEntries)[BlocksInChunk[i].first + j], (*fEntries)[BlocksInChunk[i].first + j + 1]);
+                  f_rdf.Foreach(func, fCols);
+                  chunkEntry++;
+               }
+            }
          }
 
          // shuffle data in RTensor
@@ -469,10 +507,24 @@ public:
          std::vector<std::pair<Long_t, Long_t>> BlocksInChunk = fValidation->ChunksIntervals[chunk];
          for (std::size_t i = 0; i < BlocksInChunk.size(); i++) {
 
-            RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
-            ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
-            f_rdf.Foreach(func, fCols);
-            chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
+            if (fNotFiltered) {            
+               RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+               ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, BlocksInChunk[i].first, BlocksInChunk[i].second);
+               f_rdf.Foreach(func, fCols);
+               chunkEntry += BlocksInChunk[i].second - BlocksInChunk[i].first;
+            }
+
+            else {            
+               std::size_t blockSize = BlocksInChunk[i].second - BlocksInChunk[i].first;
+               std::cout << "Block size: " << blockSize << std::endl;
+               std::cout << "Block: (" << BlocksInChunk[i].first << ", " << BlocksInChunk[i].second << ")" << std::endl;               
+               for (std::size_t j = 0; j < blockSize; j++) {
+                  RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
+                  ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, (*fEntries)[BlocksInChunk[i].first + j], (*fEntries)[BlocksInChunk[i].first + j + 1]);                  
+                  f_rdf.Foreach(func, fCols);
+                  chunkEntry++;
+               }
+            }
          }
 
          // shuffle data in RTensor
