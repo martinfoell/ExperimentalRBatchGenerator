@@ -81,12 +81,11 @@ private:
    std::size_t fNumValidationChunks;
 
 public:
-   RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t numEpochs, const std::size_t chunkSize,
+   RBatchGenerator(ROOT::RDF::RNode &rdf, const std::size_t chunkSize,
                    const std::size_t rangeSize, const std::size_t batchSize, const float validationSplit, bool shuffle,
                    const std::vector<std::string> &cols)
       : f_rdf(rdf),
         fCols(cols),
-        fNumEpochs(numEpochs),
         fChunkSize(chunkSize),
         fRangeSize(rangeSize),
         fBatchSize(batchSize),
@@ -101,8 +100,9 @@ public:
 
    {
 
+      fNumEntries = f_rdf.Count().GetValue();      
       fChunkLoader =
-         std::make_unique<RChunkLoader<Args...>>(f_rdf, fChunkSize, fRangeSize, fValidationSplit, fCols, fShuffle);
+         std::make_unique<RChunkLoader<Args...>>(f_rdf, fNumEntries, fChunkSize, fRangeSize, fValidationSplit, fCols, fShuffle);
       fBatchLoader = std::make_unique<RBatchLoader>(fChunkSize, fBatchSize, fNumColumns);
 
       fChunkLoader->SplitDataset();

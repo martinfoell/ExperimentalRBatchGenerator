@@ -9,20 +9,20 @@ sys.path.insert(0, '../python')
 
 # rdf = ROOT.RDataFrame("tree", "../data/file*.root")
 rdf = ROOT.RDataFrame("tree", "../data/256.root")
-
-# rdf_r = rdf.Filter("A > 300", 'cut 1')
+# rdf = rdf.Filter("entry % 3 == 0", "test filter")
+rdf = rdf.Filter("entry % 4 == 0", "test filter")
+# Rdf_r = rdf.Filter("A > 300", 'cut 1')
 # report = rdf_r.Report()
 # print(report.Print())
-# print(rdf.Count().GetValue())
+print(rdf.Count().GetValue())
 # sys.exit()
 
 # import _batchgenerator as bg
 
 
-chunk_size = 16
-range_size = 10
-batch_size = 8
-num_epochs = 1
+chunk_size = 12
+range_size = 4
+batch_size = 4
 
 columns = ["entry", "entry", "entry"]
 target = ["entry"]
@@ -30,10 +30,7 @@ validation_split = 0.5
 # validation_split = 0.333333333
 shuffling = True;
 
-gen_train, gen_validation =  RBG.CreatePyTorchGenerators(rdf, num_epochs, chunk_size, range_size, batch_size, columns, target, validation_split, shuffling)
-# basegenerator = bg.BaseGenerator(rdf, chunk_size, range_size, batch_size, columns, target, validation_split, False)
-# print(basegenerator.get_template(rdf_node, ["A"]))
-# print(basegenerator.get_template(rdf_node))
+gen_train, gen_validation =  RBG.CreatePyTorchGenerators(rdf, chunk_size, range_size, batch_size, columns, target, validation_split, shuffling)
 size_train = 0
 size_val = 0    
 sig_train = 0
@@ -58,7 +55,7 @@ for i in range(2):
         size_val += y_val.size()[0]        
         sig_val += torch.sum(y_val)
         batch = y_val.numpy().flatten().astype(int).tolist()
-        # print(len(batch))
+        # print(x_val)
         ValidationBatches.append(batch)
         
     TrainingEntries = np.array(TrainingBatches).flatten().astype(int).tolist()
@@ -76,7 +73,9 @@ for i in range(2):
     print(sorted(DatasetEntries))
     print(" ")
 
+    print(TrainingBatches)
     print(ValidationBatches)
+
 
 
 # for i in range(5):

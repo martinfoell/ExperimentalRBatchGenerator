@@ -52,7 +52,6 @@ class BaseGenerator:
     def __init__(
         self,
         rdataframe: RNode,
-        num_epochs: int,                
         chunk_size: int,        
         range_size: int,                    
         batch_size: int,
@@ -138,7 +137,6 @@ class BaseGenerator:
 
         self.num_columns = len(self.all_columns)
         self.batch_size = batch_size
-        self.num_epochs = num_epochs
 
         # Handle target
         self.target_given = len(self.target_columns) > 0
@@ -172,7 +170,6 @@ class BaseGenerator:
 
         self.generator = ROOT.RBatchGenerator(template)(
             self.noded_rdf,
-            num_epochs,
             chunk_size,
             range_size,
             batch_size,
@@ -453,7 +450,6 @@ class ValidationRBatchGenerator:
 
 def CreatePyTorchGenerators(
     rdataframe: RNode,
-    num_epochs: int,            
     chunk_size: int,        
     range_size: int,                    
     batch_size: int,
@@ -514,7 +510,6 @@ def CreatePyTorchGenerators(
     """
     base_generator = BaseGenerator(
         rdataframe,
-        num_epochs,
         chunk_size,
         range_size,
         batch_size,

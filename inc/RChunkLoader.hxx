@@ -148,9 +148,10 @@ private:
    std::unique_ptr<RChunkConstructor> fValidation;
 
 public:
-   RChunkLoader(ROOT::RDF::RNode &rdf, const std::size_t chunkSize, const std::size_t rangeSize,
+   RChunkLoader(ROOT::RDF::RNode &rdf, std::size_t numEntries, const std::size_t chunkSize, const std::size_t rangeSize,
                 const float validationSplit, const std::vector<std::string> &cols, bool shuffle)
       : f_rdf(rdf),
+        fNumEntries(numEntries),
         fCols(cols),
         fChunkSize(chunkSize),
         fRangeSize(rangeSize),
@@ -163,9 +164,9 @@ public:
       //    fNumEntries = f_rdf.Count().GetValue();
       // }
 
-      fNumEntries = f_rdf.Count().GetValue();
+      // fNumEntries = f_rdf.Count().GetValue();
       if (fNotFiltered) {
-         fNumEntries = f_rdf.Count().GetValue();
+         // fNumEntries = f_rdf.Count().GetValue();
          std::cout << "Entries: " << fNumEntries << std::endl;
          std::cout << "Not filtered" << std::endl;
          // fLoadingThread = std::make_unique<std::thread>(&RBatchGenerator::LoadChunksNoFilters, this);
@@ -192,8 +193,7 @@ public:
 
       fTraining = std::make_unique<RChunkConstructor>(fNumTrainEntries, fChunkSize, fRangeSize);
       fValidation = std::make_unique<RChunkConstructor>(fNumValidationEntries, fChunkSize, fRangeSize);
-      std::cout << "Number of entries: " << fNumEntries << std::endl;
-         
+      
    }
 
    void PrintVector(std::vector<Long_t> vec)
@@ -467,9 +467,11 @@ public:
             else {            
                std::size_t blockSize = BlocksInChunk[i].second - BlocksInChunk[i].first;
                std::cout << "Block size: " << blockSize << std::endl;
-               for (std::size_t j = 0; j < blockSize ; j++) {
+               std::cout << "Block: (" << BlocksInChunk[i].first << ", " << BlocksInChunk[i].second << ")" << std::endl;               
+               for (std::size_t j = 0; j < blockSize; j++) {
                   RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
                   ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, (*fEntries)[BlocksInChunk[i].first + j], (*fEntries)[BlocksInChunk[i].first + j + 1]);
+                  std::cout << (*fEntries)[BlocksInChunk[i].first + j] << " " << (*fEntries)[BlocksInChunk[i].first + j + 1] << std::endl;
                   f_rdf.Foreach(func, fCols);
                   chunkEntry++;
                }
@@ -520,7 +522,8 @@ public:
                std::cout << "Block: (" << BlocksInChunk[i].first << ", " << BlocksInChunk[i].second << ")" << std::endl;               
                for (std::size_t j = 0; j < blockSize; j++) {
                   RRangeChunkLoaderFunctor<Args...> func(Tensor, chunkEntry, fNumCols);
-                  ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, (*fEntries)[BlocksInChunk[i].first + j], (*fEntries)[BlocksInChunk[i].first + j + 1]);                  
+                  ROOT::Internal::RDF::ChangeBeginAndEndEntries(f_rdf, (*fEntries)[BlocksInChunk[i].first + j], (*fEntries)[BlocksInChunk[i].first + j + 1]);
+                  std::cout << (*fEntries)[BlocksInChunk[i].first + j] << " " << (*fEntries)[BlocksInChunk[i].first + j + 1] << std::endl;
                   f_rdf.Foreach(func, fCols);
                   chunkEntry++;
                }
